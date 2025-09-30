@@ -1,2 +1,2 @@
-# -Project-Title-CSE327---Team-2
+# DermaDoc: A Multi Agent Dermatologist
 A Project for CSE327 - Software Engineering | North South University
