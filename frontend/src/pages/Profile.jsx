@@ -137,6 +137,26 @@ export default function Profile() {
     },
   })
 
+  // Image delete mutation
+  const deleteImageMutation = useMutation({
+    mutationFn: () => authApi.deleteImage(),
+    onSuccess: (data) => {
+      login(data, localStorage.getItem("token"))
+      queryClient.setQueryData(["currentUser"], data)
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+      setImagePreview(null)
+      toast.success("Image deleted!", {
+        description: "Your profile image has been removed successfully.",
+      })
+    },
+    onError: (error) => {
+      console.error("Image delete error:", error)
+      toast.error("Delete failed", {
+        description: error.message || "Please try again.",
+      })
+    },
+  })
+
   // Password change mutation
   const changePasswordMutation = useMutation({
     mutationFn: ({ currentPassword, newPassword }) =>
@@ -240,10 +260,7 @@ export default function Profile() {
   }
 
   const handleRemoveImage = () => {
-    // Note: We'd need a delete endpoint to fully remove the image
-    // For now, just clear preview (user can upload new one)
-    setImagePreview(null)
-    toast.info("To remove your image, upload a new one")
+    deleteImageMutation.mutate()
   }
 
   return (
@@ -468,11 +485,11 @@ export default function Profile() {
                     <UserIcon className="w-16 h-16 text-muted-foreground" />
                   </div>
                 )}
-                {uploadImageMutation.isPending && (
-                  <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
-                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  </div>
-                )}
+                 {(uploadImageMutation.isPending || deleteImageMutation.isPending) && (
+                   <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                     <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                   </div>
+                 )}
               </div>
               <div className="flex gap-2">
                 <input
@@ -491,16 +508,16 @@ export default function Profile() {
                   <Upload className="w-4 h-4 mr-2" />
                   {imagePreview ? "Change" : "Upload"}
                 </Button>
-                {imagePreview && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleRemoveImage}
-                    disabled={uploadImageMutation.isPending}
-                  >
-                    <X className="w-4 h-4" />
-                  </Button>
-                )}
+                 {imagePreview && (
+                   <Button
+                     variant="outline"
+                     size="sm"
+                     onClick={handleRemoveImage}
+                     disabled={uploadImageMutation.isPending || deleteImageMutation.isPending}
+                   >
+                     <X className="w-4 h-4" />
+                   </Button>
+                 )}
               </div>
             </CardContent>
           </Card>

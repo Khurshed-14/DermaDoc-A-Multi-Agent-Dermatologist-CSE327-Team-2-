@@ -112,6 +112,12 @@ export const authApi = {
 
         return response.json()
       },
+
+      deleteImage: async () => {
+        return apiRequest("/api/auth/delete-image", {
+          method: "DELETE",
+        })
+      },
     }
 
 /**

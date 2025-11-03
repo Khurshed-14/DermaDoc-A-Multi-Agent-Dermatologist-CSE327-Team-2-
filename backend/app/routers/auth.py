@@ -393,7 +393,70 @@ async def upload_image(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Image upload error: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.delete("/delete-image")
+async def delete_image(
+    current_user: User = Depends(get_current_user)
+):
+    """Delete user profile image"""
+    try:
+        if current_user is None or not hasattr(current_user, 'id'):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+        
+        user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        if user.get("image_path"):
+            await delete_user_image(user["image_path"])
+        
+        await db.database.Users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "image_path": None,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        updated_user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        user_obj = User(
+            id=str(updated_user["_id"]),
+            name=updated_user["name"],
+            email=updated_user["email"],
+            birthdate=updated_user["birthdate"],
+            gender=updated_user["gender"],
+            image_path=updated_user.get("image_path"),
+            created_at=updated_user["created_at"],
+            updated_at=updated_user["updated_at"],
+        )
+        
+        user_json = user_obj.model_dump_json(exclude_none=False, exclude_unset=False)
+        user_dict = json.loads(user_json)
+        return JSONResponse(content=user_dict)
+    except HTTPException:
+        raise
+    except Exception as e:
         import traceback
         traceback.print_exc()
         raise HTTPException(
