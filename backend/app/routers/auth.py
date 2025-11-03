@@ -1,11 +1,14 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer
+from fastapi.responses import JSONResponse
 from datetime import datetime
 from bson import ObjectId
+import json
 from app.models.user import UserCreate, User, UserLogin, Token, UserUpdate, PasswordChange
 from app.core.database import db
 from app.core.security import get_password_hash, verify_password, create_access_token, decode_access_token
 from app.core.config import settings
+from app.core.storage import save_user_image, delete_user_image, get_image_url
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
@@ -35,12 +38,18 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
             detail="User not found",
         )
     
+    # Get image_path - explicitly retrieve and handle it
+    image_path = user.get("image_path")
+    if image_path == "":
+        image_path = None
+    
     return User(
         id=str(user["_id"]),
         name=user["name"],
         email=user["email"],
         birthdate=user["birthdate"],
         gender=user["gender"],
+        image_path=image_path,
         created_at=user["created_at"],
         updated_at=user["updated_at"],
     )
@@ -139,6 +148,7 @@ async def login(credentials: UserLogin):
         email=user["email"],
         birthdate=user["birthdate"],
         gender=user["gender"],
+        image_path=user.get("image_path"),
         created_at=user["created_at"],
         updated_at=user["updated_at"],
     )
@@ -146,10 +156,52 @@ async def login(credentials: UserLogin):
     return Token(access_token=access_token, user=user_obj)
 
 
-@router.get("/me", response_model=User)
-async def get_current_user_info(current_user: User = Depends(get_current_user)):
-    """Get current user information"""
-    return current_user
+@router.get("/me")
+async def get_current_user_info(token: str = Depends(oauth2_scheme)):
+    """Get current user information - always fetch fresh from database"""
+    # Decode token to get user_id
+    payload = decode_access_token(token)
+    if payload is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    user_id = payload.get("sub")
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials",
+        )
+    
+    # Always fetch fresh from database
+    user = await db.database.Users.find_one({"_id": ObjectId(user_id)})
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+        )
+    
+    image_path = user.get("image_path")
+    if image_path == "":
+        image_path = None
+    
+    user_obj = User(
+        id=str(user["_id"]),
+        name=user["name"],
+        email=user["email"],
+        birthdate=user["birthdate"],
+        gender=user["gender"],
+        image_path=image_path,
+        created_at=user["created_at"],
+        updated_at=user["updated_at"],
+    )
+    
+    # Serialize to JSON to ensure datetime objects are properly handled
+    user_json = user_obj.model_dump_json(exclude_none=False, exclude_unset=False)
+    user_dict = json.loads(user_json)
+    return JSONResponse(content=user_dict)
 
 
 @router.post("/logout")
@@ -158,7 +210,7 @@ async def logout():
     return {"message": "Successfully logged out"}
 
 
-@router.put("/profile", response_model=User)
+@router.put("/profile")
 async def update_profile(
     user_update: UserUpdate,
     current_user: User = Depends(get_current_user)
@@ -192,16 +244,13 @@ async def update_profile(
                 detail="No fields to update"
             )
         
-        # Add updated_at timestamp
         update_doc["updated_at"] = datetime.utcnow()
         
-        # Update user in database
         await db.database.Users.update_one(
             {"_id": ObjectId(current_user.id)},
             {"$set": update_doc}
         )
         
-        # Fetch updated user
         updated_user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
         if not updated_user:
             raise HTTPException(
@@ -209,15 +258,20 @@ async def update_profile(
                 detail="User not found"
             )
         
-        return User(
+        user_obj = User(
             id=str(updated_user["_id"]),
             name=updated_user["name"],
             email=updated_user["email"],
             birthdate=updated_user["birthdate"],
             gender=updated_user["gender"],
+            image_path=updated_user.get("image_path"),
             created_at=updated_user["created_at"],
             updated_at=updated_user["updated_at"],
         )
+        
+        user_json = user_obj.model_dump_json(exclude_none=False, exclude_unset=False)
+        user_dict = json.loads(user_json)
+        return JSONResponse(content=user_dict)
     except HTTPException:
         raise
     except Exception as e:
@@ -271,6 +325,75 @@ async def change_password(
         raise
     except Exception as e:
         print(f"Password change error: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user)
+):
+    """Upload user profile image"""
+    try:
+        # Validate current_user is not None
+        if current_user is None or not hasattr(current_user, 'id'):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required"
+            )
+        
+        # Delete old image if exists
+        user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
+        if user and user.get("image_path"):
+            await delete_user_image(user["image_path"])
+        
+        # Save new image
+        image_path = await save_user_image(file, current_user.id)
+        
+        # Update user in database
+        await db.database.Users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "image_path": image_path,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        # Fetch updated user
+        updated_user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Create User object and serialize explicitly
+        user_obj = User(
+            id=str(updated_user["_id"]),
+            name=updated_user["name"],
+            email=updated_user["email"],
+            birthdate=updated_user["birthdate"],
+            gender=updated_user["gender"],
+            image_path=updated_user.get("image_path"),
+            created_at=updated_user["created_at"],
+            updated_at=updated_user["updated_at"],
+        )
+        
+        # Use model_dump_json to properly serialize datetime objects
+        user_json = user_obj.model_dump_json(exclude_none=False, exclude_unset=False)
+        user_dict = json.loads(user_json)
+        return JSONResponse(content=user_dict)
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Image upload error: {type(e).__name__}: {str(e)}")
         import traceback
         traceback.print_exc()
         raise HTTPException(

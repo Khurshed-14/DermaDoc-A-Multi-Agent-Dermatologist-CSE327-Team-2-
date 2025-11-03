@@ -26,6 +26,7 @@ export function AuthProvider({ children }) {
               email: userData.email,
               birthdate: userData.birthdate,
               gender: userData.gender,
+              image_path: userData.image_path || null,
             }
             setUser(safeUserData)
             setIsAuthenticated(true)
@@ -43,6 +44,9 @@ export function AuthProvider({ children }) {
           setUser(null)
           setIsAuthenticated(false)
         }
+      } else {
+        // No stored user or token
+        setIsLoading(false)
       }
       setIsLoading(false)
     }
@@ -70,6 +74,7 @@ export function AuthProvider({ children }) {
       email: userData.email,
       birthdate: userData.birthdate,
       gender: userData.gender,
+      image_path: userData.image_path,
     }
     setUser(safeUserData)
     setIsAuthenticated(true)

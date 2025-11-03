@@ -80,16 +80,39 @@ export const authApi = {
     })
   },
 
-  changePassword: async (currentPassword, newPassword) => {
-    return apiRequest("/api/auth/change-password", {
-      method: "POST",
-      body: JSON.stringify({
-        current_password: currentPassword,
-        new_password: newPassword,
-      }),
-    })
-  },
-}
+      changePassword: async (currentPassword, newPassword) => {
+        return apiRequest("/api/auth/change-password", {
+          method: "POST",
+          body: JSON.stringify({
+            current_password: currentPassword,
+            new_password: newPassword,
+          }),
+        })
+      },
+
+      uploadImage: async (file) => {
+        const token = localStorage.getItem("token")
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+        
+        const formData = new FormData()
+        formData.append("file", file)
+
+        const response = await fetch(`${API_BASE_URL}/api/auth/upload-image`, {
+          method: "POST",
+          headers: {
+            ...(token && { Authorization: `Bearer ${token}` }),
+          },
+          body: formData,
+        })
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({ detail: response.statusText }))
+          throw new Error(error.detail || error.message || `HTTP error! status: ${response.status}`)
+        }
+
+        return response.json()
+      },
+    }
 
 /**
  * Chatbot API functions

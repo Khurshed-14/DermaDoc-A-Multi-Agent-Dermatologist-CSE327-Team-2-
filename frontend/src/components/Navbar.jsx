@@ -70,7 +70,21 @@ export default function Navbar() {
                 to="/profile"
                 className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors"
               >
-                <User className="w-4 h-4" />
+                {user?.image_path ? (
+                  <img
+                    src={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"}/api/storage/${user.image_path}`}
+                    alt={user?.name || "User"}
+                    className="w-8 h-8 rounded-full object-cover border border-muted"
+                    onError={(e) => {
+                      e.target.style.display = "none"
+                      e.target.nextSibling.style.display = "block"
+                    }}
+                  />
+                ) : null}
+                <User
+                  className="w-4 h-4"
+                  style={{ display: user?.image_path ? "none" : "block" }}
+                />
                 <span>
                   Hi, {user?.name || user?.username || "User"}
                 </span>

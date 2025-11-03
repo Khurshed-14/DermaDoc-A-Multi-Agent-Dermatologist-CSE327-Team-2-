@@ -8,6 +8,7 @@ class UserBase(BaseModel):
     email: EmailStr
     birthdate: str  # ISO date string
     gender: str
+    image_path: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -19,6 +20,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     birthdate: Optional[str] = None
     gender: Optional[str] = None
+    image_path: Optional[str] = None
 
 
 class PasswordChange(BaseModel):
@@ -38,8 +40,22 @@ class User(UserBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = {
+        "from_attributes": True,
+        "populate_by_name": True,
+        "json_schema_extra": {
+            "example": {
+                "id": "123",
+                "name": "John Doe",
+                "email": "john@example.com",
+                "birthdate": "1990-01-01",
+                "gender": "male",
+                "image_path": None,
+                "created_at": "2025-01-01T00:00:00",
+                "updated_at": "2025-01-01T00:00:00",
+            }
+        }
+    }
 
 
 class UserLogin(BaseModel):

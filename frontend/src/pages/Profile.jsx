@@ -1,8 +1,7 @@
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useState, useEffect, useRef } from "react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { Eye, EyeOff, Save } from "lucide-react"
+import { Eye, EyeOff, Save, Upload, User as UserIcon, X } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
@@ -30,7 +29,6 @@ import { authApi } from "../lib/api"
 import { cn } from "../lib/utils"
 
 export default function Profile() {
-  const navigate = useNavigate()
   const { user, isAuthenticated, login } = useAuth()
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
@@ -52,45 +50,58 @@ export default function Profile() {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [pendingProfileData, setPendingProfileData] = useState(null)
 
-  // Redirect if not authenticated
-  useEffect(() => {
-    if (!isAuthenticated) {
-      navigate("/login")
-    }
-  }, [isAuthenticated, navigate])
+  // Image upload
+  const fileInputRef = useRef(null)
+  const [imagePreview, setImagePreview] = useState(null)
 
-  // Load user data
-  useEffect(() => {
-    if (user) {
-      setName(user.name || "")
-      setEmail(user.email || "")
-      setBirthdate(user.birthdate || "")
-      setGender(user.gender || "")
-    }
-  }, [user])
+  // Helper function to get image URL
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+    return `${API_BASE_URL}/api/storage/${imagePath}`
+  }
 
-  // Fetch fresh user data
+  // Note: Authentication check is now handled by ProtectedRoute component
+  // This component will only render if user is authenticated
+
+  // Fetch fresh user data from server
   const { data: currentUser } = useQuery({
     queryKey: ["currentUser"],
     queryFn: authApi.getCurrentUser,
     enabled: isAuthenticated,
     retry: false,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    staleTime: 0,
+    gcTime: 0,
   })
 
-  // Update local state when fresh data is fetched
+  // Update local state from server or context
   useEffect(() => {
-    if (currentUser) {
-      setName(currentUser.name || "")
-      setEmail(currentUser.email || "")
-      setBirthdate(currentUser.birthdate || "")
-      setGender(currentUser.gender || "")
+    const userData = currentUser || user
+    if (!userData) return
+
+    setName(userData.name || "")
+    setEmail(userData.email || "")
+    setBirthdate(userData.birthdate || "")
+    setGender(userData.gender || "")
+    
+    const imagePath = currentUser?.image_path || user?.image_path
+    if (imagePath && imagePath !== null && imagePath !== undefined && imagePath !== "") {
+      setImagePreview(getImageUrl(imagePath))
+    } else {
+      setImagePreview(null)
     }
-  }, [currentUser])
+  }, [currentUser, user])
+
+  const queryClient = useQueryClient()
 
   // Profile update mutation
   const updateProfileMutation = useMutation({
     mutationFn: (profileData) => authApi.updateProfile(profileData),
     onSuccess: (data) => {
+      queryClient.setQueryData(["currentUser"], data)
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] })
       login(data, localStorage.getItem("token"))
       toast.success("Profile updated!", {
         description: "Your profile information has been updated successfully.",
@@ -100,6 +111,28 @@ export default function Profile() {
       console.error("Profile update error:", error)
       toast.error("Update failed", {
         description: error.message || "Please check your information and try again.",
+      })
+    },
+  })
+
+  // Image upload mutation
+  const uploadImageMutation = useMutation({
+    mutationFn: (file) => authApi.uploadImage(file),
+    onSuccess: (data) => {
+      login(data, localStorage.getItem("token"))
+      queryClient.setQueryData(["currentUser"], data)
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] })
+      toast.success("Image uploaded!", {
+        description: "Your profile image has been updated successfully.",
+      })
+      if (data.image_path) {
+        setImagePreview(getImageUrl(data.image_path))
+      }
+    },
+    onError: (error) => {
+      console.error("Image upload error:", error)
+      toast.error("Upload failed", {
+        description: error.message || "Please try again.",
       })
     },
   })
@@ -174,8 +207,43 @@ export default function Profile() {
 
   const passwordMatch = confirmPassword === "" || newPassword === confirmPassword
 
-  if (!isAuthenticated) {
-    return null
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"]
+    if (!validTypes.includes(file.type)) {
+      toast.error("Invalid file type", {
+        description: "Please upload a JPEG, PNG, GIF, or WebP image.",
+      })
+      return
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("File too large", {
+        description: "Please upload an image smaller than 5MB.",
+      })
+      return
+    }
+
+    // Show preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setImagePreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+
+    // Upload immediately
+    uploadImageMutation.mutate(file)
+  }
+
+  const handleRemoveImage = () => {
+    // Note: We'd need a delete endpoint to fully remove the image
+    // For now, just clear preview (user can upload new one)
+    setImagePreview(null)
+    toast.info("To remove your image, upload a new one")
   }
 
   return (
@@ -185,16 +253,18 @@ export default function Profile() {
         <p className="text-muted-foreground">Manage your account information and preferences</p>
       </div>
 
-      <div className="space-y-6">
-        {/* Profile Information Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Personal Information</CardTitle>
-            <CardDescription>
-              Update your personal details and contact information
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Side: Profile Information and Password Change */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Profile Information Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Personal Information</CardTitle>
+              <CardDescription>
+                Update your personal details and contact information
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
             <form onSubmit={handleProfileSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="profile-name">Full Name</Label>
@@ -371,7 +441,70 @@ export default function Profile() {
               </Button>
             </form>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
+
+        {/* Right Side: Profile Picture */}
+        <div className="lg:col-span-1">
+          <Card className="sticky top-6">
+            <CardHeader>
+              <CardTitle>Profile Picture</CardTitle>
+              <CardDescription>Update your profile image</CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col items-center gap-4">
+              <div className="relative">
+                {imagePreview ? (
+                  <img
+                    src={imagePreview}
+                    alt="Profile"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-muted"
+                    onError={(e) => {
+                      setImagePreview(null)
+                      e.target.style.display = "none"
+                    }}
+                  />
+                ) : (
+                  <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-muted">
+                    <UserIcon className="w-16 h-16 text-muted-foreground" />
+                  </div>
+                )}
+                {uploadImageMutation.isPending && (
+                  <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  onChange={handleImageChange}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadImageMutation.isPending}
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  {imagePreview ? "Change" : "Upload"}
+                </Button>
+                {imagePreview && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRemoveImage}
+                    disabled={uploadImageMutation.isPending}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Profile Update Confirmation Modal */}

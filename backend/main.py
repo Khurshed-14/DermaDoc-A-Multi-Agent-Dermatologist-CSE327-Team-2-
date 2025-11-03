@@ -1,11 +1,14 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from app.routers import auth, chat
 from app.routers import chat_sync
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
+from app.core.storage import STORAGE_ROOT
 import traceback
 
 
@@ -63,6 +66,15 @@ async def global_exception_handler(request: Request, exc: Exception):
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
 app.include_router(chat_sync.router, prefix="/api/chat", tags=["chat"])
+
+# Serve storage files
+@app.get("/api/storage/{file_path:path}")
+async def serve_storage(file_path: str):
+    """Serve files from storage directory"""
+    file_full_path = STORAGE_ROOT / file_path
+    if file_full_path.exists() and file_full_path.is_file():
+        return FileResponse(file_full_path)
+    raise HTTPException(status_code=404, detail="File not found")
 
 
 @app.get("/")
