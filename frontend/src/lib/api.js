@@ -269,30 +269,54 @@ export const chatApi = {
 }
 
 /**
- * Example: Skin scan API functions (when backend is ready)
- * Uncomment and implement when FastAPI endpoints are available
+ * Skin check API functions
  */
-// export const scanApi = {
-//   uploadScan: async (imageFile, bodyLocation) => {
-//     const formData = new FormData()
-//     formData.append("image", imageFile)
-//     formData.append("body_location", bodyLocation)
-//
-//     return apiRequest("/api/scans/upload", {
-//       method: "POST",
-//       body: formData,
-//       headers: {
-//         Authorization: `Bearer ${localStorage.getItem("token")}`,
-//       },
-//     })
-//   },
-//
-//   getScanResults: async (scanId) => {
-//     return apiRequest(`/api/scans/${scanId}`)
-//   },
-//
-//   getScanHistory: async () => {
-//     return apiRequest("/api/scans")
-//   },
-// }
+export const skinCheckApi = {
+  uploadImage: async (file, bodyPart) => {
+    const token = localStorage.getItem("token")
+    const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+    
+    const formData = new FormData()
+    formData.append("file", file)
+    if (bodyPart) {
+      formData.append("body_part", bodyPart)
+    }
+
+    const response = await fetch(`${API_BASE_URL}/api/skin-check/upload`, {
+      method: "POST",
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: response.statusText }))
+      throw new Error(error.detail || error.message || `HTTP error! status: ${response.status}`)
+    }
+
+    return response.json()
+  },
+
+  getImages: async () => {
+    return apiRequest("/api/skin-check/images")
+  },
+
+  getImage: async (imageId) => {
+    return apiRequest(`/api/skin-check/images/${imageId}`)
+  },
+
+  updateImage: async (imageId, updateData) => {
+    return apiRequest(`/api/skin-check/images/${imageId}`, {
+      method: "PUT",
+      body: JSON.stringify(updateData),
+    })
+  },
+
+  deleteImage: async (imageId) => {
+    return apiRequest(`/api/skin-check/images/${imageId}`, {
+      method: "DELETE",
+    })
+  },
+}
 

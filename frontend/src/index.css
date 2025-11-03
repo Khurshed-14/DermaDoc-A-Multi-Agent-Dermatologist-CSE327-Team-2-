@@ -39,3 +39,99 @@
   }
 }
 
+/* Body Component Styling - Make it visible */
+.body-component-wrapper {
+  padding: 1rem;
+  background: hsl(var(--card));
+  border-radius: 0.5rem;
+}
+
+.body-component-wrapper svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Default styling for all paths - visible outline */
+.body-component-wrapper svg path {
+  stroke: hsl(var(--muted-foreground) / 0.4) !important;
+  stroke-width: 1.5px !important;
+  fill: transparent !important;
+  transition: fill 0.2s ease-in-out, stroke 0.2s ease-in-out, stroke-width 0.2s ease-in-out;
+  cursor: pointer;
+}
+
+/* Hover state - light highlight */
+.body-component-wrapper svg path:hover {
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 2.5px !important;
+  fill: hsl(var(--primary) / 0.1) !important;
+}
+
+/* Selected/active state - strong highlight */
+.body-component-wrapper svg path[fill],
+.body-component-wrapper svg path[style*="fill"],
+.body-component-wrapper svg path[style*="fill: rgb"],
+.body-component-wrapper svg path[style*="fill:rgba"],
+.body-component-wrapper svg path[style*="fill:#"],
+.body-component-wrapper svg path[style*="fill: rgb("],
+.body-component-wrapper svg path[data-selected="true"] {
+  fill: hsl(var(--primary) / 0.3) !important;
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+}
+
+/* Handle g elements (groups) */
+.body-component-wrapper svg g {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.body-component-wrapper svg g path {
+  stroke: hsl(var(--muted-foreground) / 0.4) !important;
+  stroke-width: 1.5px !important;
+  fill: transparent !important;
+}
+
+/* Hover on group */
+.body-component-wrapper svg g:hover path {
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 2.5px !important;
+  fill: hsl(var(--primary) / 0.1) !important;
+}
+
+/* Selected group - strong highlight */
+.body-component-wrapper svg g[style*="fill"] path,
+.body-component-wrapper svg g[fill] path,
+.body-component-wrapper svg g[data-selected="true"] path {
+  fill: hsl(var(--primary) / 0.3) !important;
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+}
+
+/* Special handling for selected groups */
+.body-component-wrapper svg g[style*="fill"] {
+  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+}
+
+/* Override any inline styles that might be set to white or light colors */
+.body-component-wrapper svg path[stroke="#ffffff"],
+.body-component-wrapper svg path[stroke="white"],
+.body-component-wrapper svg path[stroke="rgb(255, 255, 255)"],
+.body-component-wrapper svg path[stroke="rgb(255,255,255)"],
+.body-component-wrapper svg path[stroke="rgba(255, 255, 255"],
+.body-component-wrapper svg g path[stroke="#ffffff"],
+.body-component-wrapper svg g path[stroke="white"] {
+  stroke: hsl(var(--muted-foreground) / 0.4) !important;
+}
+
+/* Ensure selected parts always show primary color */
+.body-component-wrapper svg path[fill]:not([fill="transparent"]):not([fill="none"]),
+.body-component-wrapper svg path[style*="fill"]:not([style*="transparent"]):not([style*="none"]) {
+  fill: hsl(var(--primary) / 0.3) !important;
+  stroke: hsl(var(--primary)) !important;
+  stroke-width: 3px !important;
+  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+}
+
