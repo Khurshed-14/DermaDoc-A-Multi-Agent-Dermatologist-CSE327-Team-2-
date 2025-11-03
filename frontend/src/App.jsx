@@ -8,6 +8,7 @@ import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Profile from "./pages/Profile"
 import { AuthProvider } from "./contexts/AuthContext"
+import Chatbot from "./components/Chatbot"
 
 // Create a query client for TanStack Query
 const queryClient = new QueryClient({
@@ -37,9 +38,10 @@ function App() {
             </main>
             <Footer />
           </div>
-        </BrowserRouter>
-        <Toaster />
-      </AuthProvider>
+            </BrowserRouter>
+            <Toaster />
+            <Chatbot />
+          </AuthProvider>
     </QueryClientProvider>
   )
 }

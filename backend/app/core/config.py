@@ -39,12 +39,26 @@ class Settings(BaseSettings):
         description="Comma-separated list of allowed CORS origins"
     )
     
+    # Google Gemini API
+    GEMINI_API_KEY: str = Field(
+        default="",
+        description="Google Gemini API key"
+    )
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=True,
         extra="ignore",
     )
+    
+    @field_validator("GEMINI_API_KEY", mode="after")
+    @classmethod
+    def strip_gemini_api_key(cls, v):
+        """Strip whitespace from Gemini API key"""
+        if isinstance(v, str):
+            return v.strip()
+        return v
     
     @field_validator("CORS_ORIGINS", mode="after")
     @classmethod

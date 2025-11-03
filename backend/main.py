@@ -2,7 +2,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.routers import auth
+from app.routers import auth, chat
+from app.routers import chat_sync
 from app.core.config import settings
 from app.core.database import connect_to_mongo, close_mongo_connection
 import traceback
@@ -12,6 +13,11 @@ import traceback
 async def lifespan(app: FastAPI):
     # Startup
     await connect_to_mongo()
+    # Log API key status (without exposing the actual key)
+    gemini_status = "configured" if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip() else "not configured"
+    print(f"Gemini API key: {gemini_status}")
+    if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip():
+        print(f"Gemini API key length: {len(settings.GEMINI_API_KEY.strip())} characters")
     yield
     # Shutdown
     await close_mongo_connection()
@@ -55,6 +61,8 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(chat.router, prefix="/api/chat", tags=["chat"])
+app.include_router(chat_sync.router, prefix="/api/chat", tags=["chat"])
 
 
 @app.get("/")

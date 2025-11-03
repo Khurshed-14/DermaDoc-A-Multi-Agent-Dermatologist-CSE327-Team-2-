@@ -24,7 +24,7 @@ export default function Hero() {
               variant="outline"
               className="text-base"
             >
-              Chat with DermaBot
+              Chat with DermaDoc
             </Button>
           </div>
           <p className="text-sm text-muted-foreground pt-2">
