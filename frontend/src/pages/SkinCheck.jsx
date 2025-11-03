@@ -173,8 +173,8 @@ export default function SkinCheck() {
                         element.tagName === 'ellipse') {
                         element.style.setProperty('fill', 'hsl(var(--primary) / 0.3)', 'important')
                         element.style.setProperty('stroke', 'hsl(var(--primary))', 'important')
-                        element.style.setProperty('stroke-width', '3px', 'important')
-                        element.style.setProperty('filter', 'drop-shadow(0 0 2px hsl(var(--primary) / 0.2))', 'important')
+                        element.style.setProperty('stroke-width', '1.5px', 'important')
+                        element.style.setProperty('filter', 'drop-shadow(0 0 1px hsl(var(--primary) / 0.1))', 'important')
                         element.setAttribute('data-permanent-selected', 'true')
                         element.setAttribute('data-selected', 'true')
                         if (parent && parent.tagName === 'g') {
@@ -186,7 +186,7 @@ export default function SkinCheck() {
                         childElements.forEach((child) => {
                             child.style.setProperty('fill', 'hsl(var(--primary) / 0.3)', 'important')
                             child.style.setProperty('stroke', 'hsl(var(--primary))', 'important')
-                            child.style.setProperty('stroke-width', '3px', 'important')
+                            child.style.setProperty('stroke-width', '1.5px', 'important')
                             child.style.setProperty('filter', 'drop-shadow(0 0 2px hsl(var(--primary) / 0.2))', 'important')
                             child.setAttribute('data-permanent-selected', 'true')
                             child.setAttribute('data-selected', 'true')
@@ -198,8 +198,8 @@ export default function SkinCheck() {
                         parentPaths.forEach((path) => {
                             path.style.setProperty('fill', 'hsl(var(--primary) / 0.3)', 'important')
                             path.style.setProperty('stroke', 'hsl(var(--primary))', 'important')
-                            path.style.setProperty('stroke-width', '3px', 'important')
-                            path.style.setProperty('filter', 'drop-shadow(0 0 2px hsl(var(--primary) / 0.2))', 'important')
+                            path.style.setProperty('stroke-width', '1.5px', 'important')
+                            path.style.setProperty('filter', 'drop-shadow(0 0 1px hsl(var(--primary) / 0.1))', 'important')
                             path.setAttribute('data-permanent-selected', 'true')
                             path.setAttribute('data-selected', 'true')
                         })
@@ -241,8 +241,8 @@ export default function SkinCheck() {
                         if (element.tagName === 'path') {
                             element.style.setProperty('fill', 'hsl(var(--primary) / 0.3)', 'important')
                             element.style.setProperty('stroke', 'hsl(var(--primary))', 'important')
-                            element.style.setProperty('stroke-width', '3px', 'important')
-                            element.style.setProperty('filter', 'drop-shadow(0 0 2px hsl(var(--primary) / 0.2))', 'important')
+                            element.style.setProperty('stroke-width', '1.5px', 'important')
+                            element.style.setProperty('filter', 'drop-shadow(0 0 1px hsl(var(--primary) / 0.1))', 'important')
                             element.setAttribute('data-permanent-selected', 'true')
                             element.setAttribute('data-selected', 'true')
                         } else if (element.tagName === 'g') {
@@ -250,8 +250,8 @@ export default function SkinCheck() {
                             paths.forEach((path) => {
                                 path.style.setProperty('fill', 'hsl(var(--primary) / 0.3)', 'important')
                                 path.style.setProperty('stroke', 'hsl(var(--primary))', 'important')
-                                path.style.setProperty('stroke-width', '3px', 'important')
-                                path.style.setProperty('filter', 'drop-shadow(0 0 2px hsl(var(--primary) / 0.2))', 'important')
+                                path.style.setProperty('stroke-width', '1.5px', 'important')
+                                path.style.setProperty('filter', 'drop-shadow(0 0 1px hsl(var(--primary) / 0.1))', 'important')
                                 path.setAttribute('data-permanent-selected', 'true')
                                 path.setAttribute('data-selected', 'true')
                             })

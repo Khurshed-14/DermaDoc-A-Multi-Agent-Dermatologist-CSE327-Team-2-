@@ -77,8 +77,8 @@
 .body-component-wrapper svg path[data-selected="true"] {
   fill: hsl(var(--primary) / 0.3) !important;
   stroke: hsl(var(--primary)) !important;
-  stroke-width: 3px !important;
-  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 1px hsl(var(--primary) / 0.1));
 }
 
 /* Handle g elements (groups) */
@@ -106,13 +106,13 @@
 .body-component-wrapper svg g[data-selected="true"] path {
   fill: hsl(var(--primary) / 0.3) !important;
   stroke: hsl(var(--primary)) !important;
-  stroke-width: 3px !important;
-  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 1px hsl(var(--primary) / 0.1));
 }
 
 /* Special handling for selected groups */
 .body-component-wrapper svg g[style*="fill"] {
-  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+  filter: drop-shadow(0 0 1px hsl(var(--primary) / 0.1));
 }
 
 /* Override any inline styles that might be set to white or light colors */
@@ -131,7 +131,7 @@
 .body-component-wrapper svg path[style*="fill"]:not([style*="transparent"]):not([style*="none"]) {
   fill: hsl(var(--primary) / 0.3) !important;
   stroke: hsl(var(--primary)) !important;
-  stroke-width: 3px !important;
-  filter: drop-shadow(0 0 2px hsl(var(--primary) / 0.2));
+  stroke-width: 1.5px !important;
+  filter: drop-shadow(0 0 1px hsl(var(--primary) / 0.1));
 }
 
