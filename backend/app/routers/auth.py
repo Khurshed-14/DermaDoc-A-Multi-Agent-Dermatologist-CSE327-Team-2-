@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime
 from bson import ObjectId
-from app.models.user import UserCreate, User, UserLogin, Token
+from app.models.user import UserCreate, User, UserLogin, Token, UserUpdate, PasswordChange
 from app.core.database import db
 from app.core.security import get_password_hash, verify_password, create_access_token, decode_access_token
 from app.core.config import settings
@@ -156,4 +156,126 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
 async def logout():
     """Logout user (client should delete token)"""
     return {"message": "Successfully logged out"}
+
+
+@router.put("/profile", response_model=User)
+async def update_profile(
+    user_update: UserUpdate,
+    current_user: User = Depends(get_current_user)
+):
+    """Update user profile information"""
+    try:
+        # Build update document with only provided fields
+        update_doc = {}
+        if user_update.name is not None:
+            update_doc["name"] = user_update.name
+        if user_update.email is not None:
+            # Check if email is already taken by another user
+            existing_user = await db.database.Users.find_one({
+                "email": user_update.email,
+                "_id": {"$ne": ObjectId(current_user.id)}
+            })
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already registered"
+                )
+            update_doc["email"] = user_update.email
+        if user_update.birthdate is not None:
+            update_doc["birthdate"] = user_update.birthdate
+        if user_update.gender is not None:
+            update_doc["gender"] = user_update.gender
+        
+        if not update_doc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No fields to update"
+            )
+        
+        # Add updated_at timestamp
+        update_doc["updated_at"] = datetime.utcnow()
+        
+        # Update user in database
+        await db.database.Users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {"$set": update_doc}
+        )
+        
+        # Fetch updated user
+        updated_user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        return User(
+            id=str(updated_user["_id"]),
+            name=updated_user["name"],
+            email=updated_user["email"],
+            birthdate=updated_user["birthdate"],
+            gender=updated_user["gender"],
+            created_at=updated_user["created_at"],
+            updated_at=updated_user["updated_at"],
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Profile update error: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.post("/change-password")
+async def change_password(
+    password_data: PasswordChange,
+    current_user: User = Depends(get_current_user)
+):
+    """Change user password"""
+    try:
+        # Get user from database
+        user = await db.database.Users.find_one({"_id": ObjectId(current_user.id)})
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        # Verify current password
+        if not verify_password(password_data.current_password, user["hashed_password"]):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Current password is incorrect"
+            )
+        
+        # Hash new password
+        new_hashed_password = get_password_hash(password_data.new_password)
+        
+        # Update password in database
+        await db.database.Users.update_one(
+            {"_id": ObjectId(current_user.id)},
+            {
+                "$set": {
+                    "hashed_password": new_hashed_password,
+                    "updated_at": datetime.utcnow()
+                }
+            }
+        )
+        
+        return {"message": "Password updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Password change error: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
 

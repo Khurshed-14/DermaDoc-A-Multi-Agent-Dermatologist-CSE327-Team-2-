@@ -66,12 +66,15 @@ export default function Navbar() {
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
             <>
-              <div className="hidden sm:flex items-center gap-2 text-sm text-gray-700">
+              <Link
+                to="/profile"
+                className="hidden sm:flex items-center gap-2 text-sm text-gray-700 hover:text-primary transition-colors"
+              >
                 <User className="w-4 h-4" />
                 <span>
                   Hi, {user?.name || user?.username || "User"}
                 </span>
-              </div>
+              </Link>
               <Button
                 variant="ghost"
                 size="sm"

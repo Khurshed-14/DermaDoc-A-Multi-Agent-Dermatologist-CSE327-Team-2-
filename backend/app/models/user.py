@@ -14,6 +14,18 @@ class UserCreate(UserBase):
     password: str = Field(..., min_length=6, max_length=72, description="Password (max 72 bytes for bcrypt)")
 
 
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    birthdate: Optional[str] = None
+    gender: Optional[str] = None
+
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=6, max_length=72)
+
+
 class UserInDB(UserBase):
     id: str
     hashed_password: str
@@ -40,3 +52,7 @@ class Token(BaseModel):
     token_type: str = "bearer"
     user: User
 
+
+class TokenData(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
