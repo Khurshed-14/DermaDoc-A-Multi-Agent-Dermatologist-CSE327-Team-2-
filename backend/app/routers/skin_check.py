@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File, Form
 from fastapi.responses import JSONResponse
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 from typing import Optional, List
 import json
@@ -40,7 +40,7 @@ async def upload_skin_check_image(
         image_path = await save_skin_check_image(file, current_user.id)
         
         # Create image document
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         image_doc = {
             "relative_path": image_path,
             "user_id": ObjectId(current_user.id),
@@ -219,7 +219,7 @@ async def update_skin_check_image(
             )
         
         # Build update document
-        update_doc = {"updated_at": datetime.utcnow()}
+        update_doc = {"updated_at": datetime.now(timezone.utc)}
         if image_update.status is not None:
             update_doc["status"] = image_update.status.value
         if image_update.disease_type is not None:
