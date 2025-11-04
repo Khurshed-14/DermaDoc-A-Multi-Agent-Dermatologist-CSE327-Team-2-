@@ -3,6 +3,7 @@ from fastapi.responses import StreamingResponse
 from google import generativeai as genai
 from app.models.chat import ChatRequest, ChatResponse, ChatMessage
 from app.core.config import settings
+from app.core.prompts import DERMADOC_SYSTEM_INSTRUCTIONS, DERMADOC_INITIAL_GREETING
 from app.routers.auth import get_current_user
 from app.models.user import User
 import json
@@ -27,7 +28,6 @@ async def chat(
         # Check if API key is configured (strip whitespace to handle any accidental spaces)
         api_key = (settings.GEMINI_API_KEY or "").strip()
         if not api_key:
-            print(f"DEBUG: GEMINI_API_KEY value: '{settings.GEMINI_API_KEY}' (type: {type(settings.GEMINI_API_KEY)}, length: {len(settings.GEMINI_API_KEY) if settings.GEMINI_API_KEY else 0})")
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Gemini API key not configured. Please set GEMINI_API_KEY in your .env file."
@@ -36,22 +36,10 @@ async def chat(
         # Reconfigure with the stripped key
         genai.configure(api_key=api_key)
 
-        # System instructions to enforce skin-only restrictions
-        system_instructions = """You are DermaDoc, a specialized AI assistant for skin health and dermatology ONLY. 
-
-CRITICAL RULES - You MUST follow these strictly:
-1. ONLY answer questions about: skin health, dermatology, skincare routines, skin conditions, skin diseases, skin care products, skin treatments, and skin-related medical topics.
-2. ALWAYS politely decline and redirect questions about: general topics, other medical fields, technology, science (unless skin-related), history, math, entertainment, sports, news, programming, or ANY topic not directly related to skin health.
-3. When declining, say: "I'm DermaDoc, specialized in skin health only. I can help with skin conditions, skincare, or dermatological questions. What skin health concern can I assist you with?"
-4. Provide evidence-based information ONLY for skin-related topics.
-5. Always remind users you're not a replacement for professional medical advice - they should consult a dermatologist for serious concerns.
-
-Your expertise is LIMITED to dermatology and skin health. Acknowledge this limitation clearly when asked about other topics."""
-
         # Initialize the model with system instructions
         model = genai.GenerativeModel(
             GEMINI_MODEL,
-            system_instruction=system_instructions
+            system_instruction=DERMADOC_SYSTEM_INSTRUCTIONS
         )
         
         # Build conversation history if provided
@@ -79,7 +67,7 @@ Your expertise is LIMITED to dermatology and skin health. Acknowledge this limit
         else:
             # Start chat with initial greeting (system instructions already set in model initialization)
             chat_session = model.start_chat(history=[
-                {"role": "model", "parts": ["Hello! I'm DermaDoc, your specialized AI assistant for skin health and dermatology. I can help you with questions about skin conditions, skincare routines, dermatological concerns, and skin-related health topics. What would you like to know about your skin health today?"]}
+                {"role": "model", "parts": [DERMADOC_INITIAL_GREETING]}
             ])
         
         # Send message and get streaming response

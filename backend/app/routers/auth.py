@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.responses import JSONResponse
-from datetime import datetime
+from datetime import datetime, timezone
 from bson import ObjectId
 import json
 from app.models.user import UserCreate, User, UserLogin, Token, UserUpdate, PasswordChange
@@ -78,7 +78,7 @@ async def signup(user_data: UserCreate):
         hashed_password = get_password_hash(user_data.password)
         
         # Create user document
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         user_doc = {
             "name": user_data.name,
             "email": user_data.email,
@@ -244,7 +244,7 @@ async def update_profile(
                 detail="No fields to update"
             )
         
-        update_doc["updated_at"] = datetime.utcnow()
+        update_doc["updated_at"] = datetime.now(timezone.utc)
         
         await db.database.Users.update_one(
             {"_id": ObjectId(current_user.id)},
@@ -315,7 +315,7 @@ async def change_password(
             {
                 "$set": {
                     "hashed_password": new_hashed_password,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
@@ -361,7 +361,7 @@ async def upload_image(
             {
                 "$set": {
                     "image_path": image_path,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )
@@ -428,7 +428,7 @@ async def delete_image(
             {
                 "$set": {
                     "image_path": None,
-                    "updated_at": datetime.utcnow()
+                    "updated_at": datetime.now(timezone.utc)
                 }
             }
         )

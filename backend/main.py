@@ -19,8 +19,6 @@ async def lifespan(app: FastAPI):
     # Log API key status (without exposing the actual key)
     gemini_status = "configured" if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip() else "not configured"
     print(f"Gemini API key: {gemini_status}")
-    if settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip():
-        print(f"Gemini API key length: {len(settings.GEMINI_API_KEY.strip())} characters")
     yield
     # Shutdown
     await close_mongo_connection()
@@ -72,7 +70,16 @@ app.include_router(skin_check.router, prefix="/api/skin-check", tags=["skin-chec
 @app.get("/api/storage/{file_path:path}")
 async def serve_storage(file_path: str):
     """Serve files from storage directory"""
-    file_full_path = STORAGE_ROOT / file_path
+    # Prevent path traversal attacks
+    file_full_path = (STORAGE_ROOT / file_path).resolve()
+    
+    # Verify the resolved path is within STORAGE_ROOT
+    try:
+        if not file_full_path.is_relative_to(STORAGE_ROOT.resolve()):
+            raise HTTPException(status_code=400, detail="Invalid file path")
+    except (ValueError, AttributeError):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    
     if file_full_path.exists() and file_full_path.is_file():
         return FileResponse(file_full_path)
     raise HTTPException(status_code=404, detail="File not found")

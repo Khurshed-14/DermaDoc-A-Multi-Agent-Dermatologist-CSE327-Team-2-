@@ -19,10 +19,10 @@ class Settings(BaseSettings):
         description="MongoDB database name"
     )
     
-    # Security - Read from .env or use defaults
+    # Security - Read from .env (REQUIRED in production)
     SECRET_KEY: str = Field(
-        default="your-secret-key-change-this-in-production",
-        description="Secret key for JWT tokens"
+        default="dev-secret-key-insecure-change-in-production-use-strong-random-key",
+        description="Secret key for JWT tokens - MUST be changed in production"
     )
     ALGORITHM: str = Field(
         default="HS256",

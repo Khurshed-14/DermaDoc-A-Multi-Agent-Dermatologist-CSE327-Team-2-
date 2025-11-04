@@ -29,16 +29,18 @@ def get_allowed_extensions() -> set:
     return ALLOWED_IMAGE_EXTENSIONS
 
 
-async def save_user_image(file: UploadFile, user_id: str) -> str:
+async def _save_image(file: UploadFile, user_id: str, storage_dir: Path, storage_type: str) -> str:
     """
-    Save user uploaded image to storage
+    Internal helper to save uploaded image to storage
     
     Args:
         file: Uploaded file object
         user_id: User ID for organizing files
+        storage_dir: Base storage directory (USER_IMAGES_DIR or SKIN_CHECK_IMAGES_DIR)
+        storage_type: Type prefix for the path (e.g., "user_images" or "skin_check_images")
         
     Returns:
-        Relative path to the saved image (e.g., "user_images/user_id/filename.jpg")
+        Relative path to the saved image
     """
     # Validate file extension
     file_ext = Path(file.filename).suffix.lower()
@@ -48,13 +50,28 @@ async def save_user_image(file: UploadFile, user_id: str) -> str:
             detail=f"Invalid file type. Allowed types: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
         )
     
+    # Sanitize user_id to prevent path traversal
+    safe_user_id = str(user_id).replace("/", "").replace("\\", "").replace("..", "")
+    if not safe_user_id or safe_user_id != str(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID"
+        )
+    
     # Create user-specific directory
-    user_dir = USER_IMAGES_DIR / user_id
+    user_dir = storage_dir / safe_user_id
     user_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate unique filename
     filename = f"{uuid.uuid4()}{file_ext}"
     file_path = user_dir / filename
+    
+    # Verify file path is within allowed storage directory (prevent path traversal)
+    if not file_path.resolve().is_relative_to(storage_dir.resolve()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path"
+        )
     
     # Read file content and check size
     content = await file.read()
@@ -82,15 +99,29 @@ async def save_user_image(file: UploadFile, user_id: str) -> str:
         if not file_path.exists():
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to save image: File was not created at {file_path}"
+                detail=f"Failed to save image: File was not created"
             )
         
-        return f"user_images/{user_id}/{filename}"
+        return f"{storage_type}/{safe_user_id}/{filename}"
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save image: {str(e)}"
         )
+
+
+async def save_user_image(file: UploadFile, user_id: str) -> str:
+    """
+    Save user uploaded image to storage
+    
+    Args:
+        file: Uploaded file object
+        user_id: User ID for organizing files
+        
+    Returns:
+        Relative path to the saved image (e.g., "user_images/user_id/filename.jpg")
+    """
+    return await _save_image(file, user_id, USER_IMAGES_DIR, "user_images")
 
 
 async def delete_user_image(image_path: Optional[str]) -> bool:
@@ -146,57 +177,7 @@ async def save_skin_check_image(file: UploadFile, user_id: str) -> str:
     Returns:
         Relative path to the saved image (e.g., "skin_check_images/user_id/filename.jpg")
     """
-    # Validate file extension
-    file_ext = Path(file.filename).suffix.lower()
-    if file_ext not in ALLOWED_IMAGE_EXTENSIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid file type. Allowed types: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
-        )
-    
-    # Create user-specific directory
-    user_dir = SKIN_CHECK_IMAGES_DIR / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
-    
-    # Generate unique filename
-    filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = user_dir / filename
-    
-    # Read file content and check size
-    content = await file.read()
-    if len(content) > MAX_IMAGE_SIZE:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"File too large. Maximum size: {MAX_IMAGE_SIZE / 1024 / 1024}MB"
-        )
-    
-    # Validate it's actually an image by checking magic bytes
-    if not content.startswith(b'\xff\xd8\xff') and not content.startswith(b'\x89PNG') and not content.startswith(b'GIF') and not content.startswith(b'WEBP', 8):
-        # Basic validation - for production, use proper image library
-        if not file_ext in {'.jpg', '.jpeg', '.png', '.gif', '.webp'}:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid image file"
-            )
-    
-    # Save file
-    try:
-        async with aiofiles.open(file_path, 'wb') as f:
-            await f.write(content)
-        
-        # Verify file was saved
-        if not file_path.exists():
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Failed to save image: File was not created at {file_path}"
-            )
-        
-        return f"skin_check_images/{user_id}/{filename}"
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to save image: {str(e)}"
-        )
+    return await _save_image(file, user_id, SKIN_CHECK_IMAGES_DIR, "skin_check_images")
 
 
 async def delete_skin_check_image(image_path: Optional[str]) -> bool:
