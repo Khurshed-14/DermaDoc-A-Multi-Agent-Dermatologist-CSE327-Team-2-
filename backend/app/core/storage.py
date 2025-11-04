@@ -72,7 +72,6 @@ async def _save_image(file: UploadFile, user_id: str, storage_dir: Path, storage
     
     # Generate unique filename
     filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = user_dir / filename
     
     # Verify paths are within allowed storage directory (prevent path traversal)
     if not user_dir.is_relative_to(storage_dir.resolve()):
