@@ -69,9 +69,19 @@ app.include_router(skin_check.router, prefix="/api/skin-check", tags=["skin-chec
 # Serve storage files
 @app.get("/api/storage/{file_path:path}")
 async def serve_storage(file_path: str):
-    """Serve files from storage directory"""
-    # Prevent path traversal attacks
-    file_full_path = (STORAGE_ROOT / file_path).resolve()
+    """Serve files from storage directory with path traversal protection"""
+    # Sanitize file path to prevent directory traversal
+    # Remove any path components that could navigate outside storage
+    safe_path = file_path.replace("..", "").replace("\\", "/")
+    if not safe_path or safe_path != file_path:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    
+    # Prevent absolute paths
+    if safe_path.startswith("/") or ":" in safe_path:
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    
+    # Construct full path and resolve it
+    file_full_path = (STORAGE_ROOT / safe_path).resolve()
     
     # Verify the resolved path is within STORAGE_ROOT
     try:

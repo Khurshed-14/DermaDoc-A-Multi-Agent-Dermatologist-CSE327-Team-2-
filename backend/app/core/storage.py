@@ -51,22 +51,37 @@ async def _save_image(file: UploadFile, user_id: str, storage_dir: Path, storage
         )
     
     # Sanitize user_id to prevent path traversal
-    safe_user_id = str(user_id).replace("/", "").replace("\\", "").replace("..", "")
+    # Only allow alphanumeric characters and hyphens (typical for ObjectId)
+    safe_user_id = "".join(c for c in str(user_id) if c.isalnum() or c == "-")
     if not safe_user_id or safe_user_id != str(user_id):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid user ID"
+            detail="Invalid user ID format"
+        )
+    
+    # Prevent absolute paths
+    if safe_user_id.startswith("/") or ":" in safe_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid user ID format"
         )
     
     # Create user-specific directory
-    user_dir = storage_dir / safe_user_id
+    user_dir = (storage_dir / safe_user_id).resolve()
     user_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate unique filename
     filename = f"{uuid.uuid4()}{file_ext}"
     file_path = user_dir / filename
     
-    # Verify file path is within allowed storage directory (prevent path traversal)
+    # Verify paths are within allowed storage directory (prevent path traversal)
+    if not user_dir.is_relative_to(storage_dir.resolve()):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid file path"
+        )
+    
+    file_path = user_dir / filename
     if not file_path.resolve().is_relative_to(storage_dir.resolve()):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
