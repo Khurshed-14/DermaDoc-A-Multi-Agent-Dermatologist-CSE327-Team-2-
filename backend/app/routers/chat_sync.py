@@ -39,6 +39,7 @@ CRITICAL RULES - You MUST follow these strictly:
 3. When declining, say: "I'm DermaDoc, specialized in skin health only. I can help with skin conditions, skincare, or dermatological questions. What skin health concern can I assist you with?"
 4. Provide evidence-based information ONLY for skin-related topics.
 5. Always remind users you're not a replacement for professional medical advice - they should consult a dermatologist for serious concerns.
+6. BE CONCISE: Keep responses brief, focused, and to the point. Avoid unnecessary elaboration. Aim for 2-4 sentences when possible, only expand if the question requires detailed explanation.
 
 Your expertise is LIMITED to dermatology and skin health. Acknowledge this limitation clearly when asked about other topics."""
 
@@ -62,7 +63,11 @@ Your expertise is LIMITED to dermatology and skin health. Acknowledge this limit
             
             if estimated_tokens > settings.CHAT_MAX_INPUT_TOKENS:
                 # Truncate by removing oldest messages, keeping the most recent ones
-                max_chars = (settings.CHAT_MAX_INPUT_TOKENS * 4) - len(chat_request.message) - 500  # Reserve space
+                # Reserve 1200 characters (300 tokens) for system instructions and overhead
+                max_chars = (settings.CHAT_MAX_INPUT_TOKENS * 4) - len(chat_request.message) - 1200
+                # If max_chars is negative, user message + overhead already exceeds budget
+                # Set to 0 to prevent exceeding token limit (no history will be kept)
+                max_chars = max(max_chars, 0)
                 truncated_history = []
                 current_chars = 0
                 
