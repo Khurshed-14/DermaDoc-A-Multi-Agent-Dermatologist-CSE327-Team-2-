@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog"
 import { useAuth } from "../contexts/AuthContext"
+import { useChatbot } from "../contexts/ChatbotContext"
 import { chatApi } from "../lib/api"
 import { cn } from "../lib/utils"
 import MarkdownMessage from "./MarkdownMessage"
@@ -30,8 +31,14 @@ const INITIAL_MESSAGE = {
 
 export default function Chatbot() {
   const { isAuthenticated, user } = useAuth()
-  const [isOpen, setIsOpen] = useState(false)
-  const [isMinimized, setIsMinimized] = useState(false)
+  const {
+    isOpen,
+    isMinimized,
+    toggleChatbot,
+    closeChatbot,
+    minimizeChatbot,
+    maximizeChatbot,
+  } = useChatbot()
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState([INITIAL_MESSAGE])
   const [showResetConfirm, setShowResetConfirm] = useState(false)
@@ -147,20 +154,12 @@ export default function Chatbot() {
     }
   }, [messages, streamingContent, isOpen, isMinimized])
 
-  const toggleChat = () => {
-    setIsOpen(!isOpen)
-    if (!isOpen) {
-      setIsMinimized(false)
-    }
-  }
-
   const handleMinimize = () => {
-    setIsMinimized(true)
+    minimizeChatbot()
   }
 
   const handleClose = () => {
-    setIsOpen(false)
-    setIsMinimized(false)
+    closeChatbot()
   }
 
   const handleResetChat = () => {
@@ -189,7 +188,7 @@ export default function Chatbot() {
       {/* Floating Chat Button - Only show when chat is closed */}
       {!isOpen && (
         <Button
-          onClick={toggleChat}
+          onClick={toggleChatbot}
           size="lg"
           className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all z-40"
           aria-label="Open chatbot"
@@ -242,7 +241,7 @@ export default function Chatbot() {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsMinimized(false)}
+                  onClick={maximizeChatbot}
                   className="h-8 w-8"
                   aria-label="Maximize"
                 >

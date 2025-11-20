@@ -82,10 +82,61 @@ Your expertise is LIMITED to dermatology and skin health. Acknowledge this limit
                 {"role": "model", "parts": ["Hello! I'm DermaDoc, your specialized AI assistant for skin health and dermatology. I can help you with questions about skin conditions, skincare routines, dermatological concerns, and skin-related health topics. What would you like to know about your skin health today?"]}
             ])
         
+        # Configure generation settings with token limits
+        generation_config = {
+            "max_output_tokens": settings.CHAT_MAX_OUTPUT_TOKENS,
+        }
+        
+        # Truncate conversation history if it exceeds input token limit
+        # Rough estimation: ~4 characters per token, but we'll be conservative
+        # and limit by message count and content length
+        if chat_history and len(chat_history) > 0:
+            # Estimate tokens: roughly 1 token per 4 characters
+            total_chars = sum(len(msg.content) for msg in chat_history) + len(chat_request.message)
+            estimated_tokens = total_chars // 4
+            
+            if estimated_tokens > settings.CHAT_MAX_INPUT_TOKENS:
+                # Truncate by removing oldest messages, keeping the most recent ones
+                # Keep system message and last few exchanges
+                max_chars = (settings.CHAT_MAX_INPUT_TOKENS * 4) - len(chat_request.message) - 500  # Reserve space
+                truncated_history = []
+                current_chars = 0
+                
+                # Keep messages from the end (most recent)
+                for msg in reversed(chat_history):
+                    msg_chars = len(msg.content)
+                    if current_chars + msg_chars <= max_chars:
+                        truncated_history.insert(0, msg)
+                        current_chars += msg_chars
+                    else:
+                        break
+                
+                if truncated_history:
+                    # Filter out the initial greeting if present (same logic as above)
+                    filtered_truncated_history = [
+                        msg for msg in truncated_history 
+                        if not (msg.role == "assistant" and "Hello! I'm DermaDoc" in msg.content)
+                    ]
+                    # Convert "assistant" to "model" for Gemini API
+                    gemini_history = [
+                        {
+                            "role": "model" if msg.role == "assistant" else msg.role,
+                            "parts": [msg.content]
+                        }
+                        for msg in filtered_truncated_history
+                    ]
+                    chat_session = model.start_chat(history=gemini_history)
+                else:
+                    # If truncation removed everything, start fresh
+                    chat_session = model.start_chat(history=[
+                        {"role": "model", "parts": ["Hello! I'm DermaDoc, your specialized AI assistant for skin health and dermatology. I can help you with questions about skin conditions, skincare routines, dermatological concerns, and skin-related health topics. What would you like to know about your skin health today?"]}
+                    ])
+        
         # Send message and get streaming response
         response = chat_session.send_message(
             chat_request.message,
-            stream=True
+            stream=True,
+            generation_config=generation_config
         )
         
         # Collect full response for history

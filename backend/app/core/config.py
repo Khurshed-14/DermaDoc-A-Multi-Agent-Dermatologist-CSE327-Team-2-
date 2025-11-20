@@ -45,6 +45,16 @@ class Settings(BaseSettings):
         description="Google Gemini API key"
     )
     
+    # Chat token limits
+    CHAT_MAX_OUTPUT_TOKENS: int = Field(
+        default=1024,
+        description="Maximum output tokens for chat responses"
+    )
+    CHAT_MAX_INPUT_TOKENS: int = Field(
+        default=8000,
+        description="Maximum input tokens for chat (will truncate history if exceeded)"
+    )
+    
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

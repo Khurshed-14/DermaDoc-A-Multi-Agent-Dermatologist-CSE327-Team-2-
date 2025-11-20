@@ -9,6 +9,7 @@ import Signup from "./pages/Signup"
 import Profile from "./pages/Profile"
 import SkinCheck from "./pages/SkinCheck"
 import { AuthProvider } from "./contexts/AuthContext"
+import { ChatbotProvider } from "./contexts/ChatbotContext"
 import Chatbot from "./components/Chatbot"
 import ProtectedRoute from "./components/ProtectedRoute"
 
@@ -27,38 +28,40 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <BrowserRouter>
-          <div className="min-h-screen bg-white flex flex-col">
-            <Header />
-            <main className="flex-1">
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/skin-check"
-                  element={
-                    <ProtectedRoute>
-                      <SkinCheck />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-            </main>
-            <Footer />
-          </div>
-            </BrowserRouter>
-            <Toaster />
-            <Chatbot />
-          </AuthProvider>
+        <ChatbotProvider>
+          <BrowserRouter>
+            <div className="min-h-screen bg-white flex flex-col">
+              <Header />
+              <main className="flex-1">
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/signup" element={<Signup />} />
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/skin-check"
+                    element={
+                      <ProtectedRoute>
+                        <SkinCheck />
+                      </ProtectedRoute>
+                    }
+                  />
+                </Routes>
+              </main>
+              <Footer />
+            </div>
+          </BrowserRouter>
+          <Toaster />
+          <Chatbot />
+        </ChatbotProvider>
+      </AuthProvider>
     </QueryClientProvider>
   )
 }

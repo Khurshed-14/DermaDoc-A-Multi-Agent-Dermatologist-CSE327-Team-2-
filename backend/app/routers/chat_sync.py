@@ -49,6 +49,34 @@ Your expertise is LIMITED to dermatology and skin health. Acknowledge this limit
         
         chat_history = chat_request.conversation_history or []
         
+        # Configure generation settings with token limits
+        generation_config = {
+            "max_output_tokens": settings.CHAT_MAX_OUTPUT_TOKENS,
+        }
+        
+        # Truncate conversation history if it exceeds input token limit
+        if chat_history and len(chat_history) > 0:
+            # Estimate tokens: roughly 1 token per 4 characters
+            total_chars = sum(len(msg.content) for msg in chat_history) + len(chat_request.message)
+            estimated_tokens = total_chars // 4
+            
+            if estimated_tokens > settings.CHAT_MAX_INPUT_TOKENS:
+                # Truncate by removing oldest messages, keeping the most recent ones
+                max_chars = (settings.CHAT_MAX_INPUT_TOKENS * 4) - len(chat_request.message) - 500  # Reserve space
+                truncated_history = []
+                current_chars = 0
+                
+                # Keep messages from the end (most recent)
+                for msg in reversed(chat_history):
+                    msg_chars = len(msg.content)
+                    if current_chars + msg_chars <= max_chars:
+                        truncated_history.insert(0, msg)
+                        current_chars += msg_chars
+                    else:
+                        break
+                
+                chat_history = truncated_history if truncated_history else []
+        
         if chat_history and len(chat_history) > 0:
             filtered_history = [
                 msg for msg in chat_history 
@@ -67,7 +95,10 @@ Your expertise is LIMITED to dermatology and skin health. Acknowledge this limit
                 {"role": "model", "parts": ["Hello! I'm DermaDoc, your specialized AI assistant for skin health and dermatology. I can help you with questions about skin conditions, skincare routines, dermatological concerns, and skin-related health topics. What would you like to know about your skin health today?"]}
             ])
         
-        response = chat_session.send_message(chat_request.message)
+        response = chat_session.send_message(
+            chat_request.message,
+            generation_config=generation_config
+        )
         
         updated_history = chat_history + [
             ChatMessage(role="user", content=chat_request.message),

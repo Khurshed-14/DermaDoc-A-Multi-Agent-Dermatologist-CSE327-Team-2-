@@ -1,7 +1,31 @@
+import { useNavigate } from "react-router-dom"
 import { Button } from "./ui/button"
 import { Smartphone } from "lucide-react"
+import { useChatbot } from "../contexts/ChatbotContext"
+import { useAuth } from "../contexts/AuthContext"
+import heroImage from "../assets/hero.png"
 
 export default function Hero() {
+  const navigate = useNavigate()
+  const { openChatbot } = useChatbot()
+  const { isAuthenticated } = useAuth()
+
+  const handleStartScan = () => {
+    if (isAuthenticated) {
+      navigate("/skin-check")
+    } else {
+      navigate("/login")
+    }
+  }
+
+  const handleChatWithDermaDoc = () => {
+    if (isAuthenticated) {
+      openChatbot()
+    } else {
+      navigate("/login")
+    }
+  }
+
   return (
     <section className="container mx-auto px-6 py-16 lg:py-24">
       <div className="flex flex-col lg:flex-row items-center justify-between gap-12">
@@ -16,13 +40,14 @@ export default function Hero() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Button size="lg" className="text-base">
+            <Button size="lg" className="text-base" onClick={handleStartScan}>
               Start Scan
             </Button>
             <Button 
               size="lg" 
               variant="outline"
               className="text-base"
+              onClick={handleChatWithDermaDoc}
             >
               Chat with DermaDoc
             </Button>
@@ -34,45 +59,18 @@ export default function Hero() {
 
         {/* Right side - Illustration */}
         <div className="flex-1 flex justify-center lg:justify-end">
-          <div className="relative w-full max-w-md">
-            {/* Placeholder for illustration - can be replaced with SVG/image */}
-            <div className="aspect-square bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 rounded-3xl flex items-center justify-center relative overflow-hidden shadow-2xl border border-primary/10">
-              {/* Simple illustration representation */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg mb-4">
-                  <Smartphone className="w-16 h-16 text-primary" />
-                </div>
-                <div className="flex gap-2">
-                  <div className="w-3 h-3 rounded-full bg-primary/30 animate-pulse"></div>
-                  <div className="w-3 h-3 rounded-full bg-primary/40 animate-pulse delay-75"></div>
-                  <div className="w-3 h-3 rounded-full bg-primary/50 animate-pulse delay-150"></div>
-                </div>
-              </div>
-              {/* Curved lines representing scan signal */}
-              <svg className="absolute inset-0 w-full h-full" viewBox="0 0 320 320">
-                <path
-                  d="M160,80 Q200,120 240,100 Q280,80 300,140"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-primary/30"
-                />
-                <path
-                  d="M160,100 Q190,140 220,120 Q250,100 280,160"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-primary/40"
-                />
-                <path
-                  d="M160,120 Q180,160 200,140 Q220,120 260,180"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="text-primary/50"
-                />
-              </svg>
-            </div>
+          {/* Illustration with pale abstract oval background */}
+          <div className="relative w-72 sm:w-80 md:w-[22rem] lg:w-[30rem] aspect-square flex items-center justify-center">
+            {/* Large soft oval (mimics reference style) */}
+            <div className="absolute -inset-10 sm:-inset-12 rounded-[55%] bg-primary/10 shadow-[0_10px_40px_-10px_hsl(var(--primary)/0.25)]" />
+            {/* Subtle inner gradient tint */}
+            <div className="absolute inset-0 rounded-[55%] bg-[linear-gradient(140deg,hsl(var(--primary)/0.18),hsl(var(--primary)/0.08)60%,transparent)] mix-blend-normal" />
+            <img
+              src={heroImage}
+              alt="App hero mockup"
+              loading="eager"
+              className="relative w-56 sm:w-64 md:w-72 lg:w-[26rem] h-auto z-10 select-none pointer-events-none drop-shadow-xl"
+            />
           </div>
         </div>
       </div>
