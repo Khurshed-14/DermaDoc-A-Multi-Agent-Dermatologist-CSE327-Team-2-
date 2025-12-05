@@ -9,6 +9,7 @@ import Signup from "./pages/Signup"
 import Profile from "./pages/Profile"
 import SkinCheck from "./pages/SkinCheck"
 import Results from "./pages/Results"
+import Dashboard from "./pages/Dashboard"
 import { AuthProvider } from "./contexts/AuthContext"
 import { ChatbotProvider } from "./contexts/ChatbotContext"
 import Chatbot from "./components/Chatbot"
@@ -43,6 +44,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <Profile />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
                       </ProtectedRoute>
                     }
                   />

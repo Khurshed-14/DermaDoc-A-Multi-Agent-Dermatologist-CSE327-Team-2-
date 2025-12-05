@@ -23,7 +23,7 @@ export default function Login() {
       toast.success("Welcome back!", {
         description: `Logged in as ${data.user.name || data.user.email}`,
       })
-      navigate("/")
+      navigate("/dashboard")
     },
     onError: (error) => {
       console.error("Login error:", error)

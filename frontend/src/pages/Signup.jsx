@@ -39,7 +39,7 @@ export default function Signup() {
       toast.success("Account created!", {
         description: `Welcome to DermaScan, ${data.user.name}!`,
       })
-      navigate("/")
+      navigate("/dashboard")
     },
     onError: (error) => {
       console.error("Signup error:", error)

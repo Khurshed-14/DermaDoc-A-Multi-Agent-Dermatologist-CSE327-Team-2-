@@ -12,7 +12,7 @@ from functools import lru_cache
 
 # Model path - relative to backend directory
 _BACKEND_DIR = Path(__file__).parent.parent.parent
-MODEL_PATH = _BACKEND_DIR / "CNN models" / "efficientnetb4_classifier.pth"
+MODEL_PATH = _BACKEND_DIR / "CNN Models" / "efficientnetb4_classifier.pth"
 
 # Class labels for the 7 skin lesion types
 CLASS_LABELS = ["AKIEC", "BCC", "BKL", "DF", "MEL", "NV", "VASC"]

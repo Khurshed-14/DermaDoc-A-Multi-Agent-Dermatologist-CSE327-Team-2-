@@ -30,7 +30,7 @@ export default function Navbar() {
     <nav className="container mx-auto px-6 py-4">
       <div className="flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
             <span className="text-white font-bold text-lg">D</span>
           </div>
@@ -39,22 +39,48 @@ export default function Navbar() {
 
         {/* Navigation Links */}
         <div className="hidden md:flex items-center gap-8">
-          <Link
-            to="/"
-            className={cn(
-              "text-sm font-medium transition-colors relative",
-              isActive("/")
-                ? "text-primary"
-                : "text-gray-700 hover:text-primary"
-            )}
-          >
-            Home
-            {isActive("/") && (
-              <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-            )}
-          </Link>
+          {!isAuthenticated && (
+            <>
+              <Link
+                to="/"
+                className={cn(
+                  "text-sm font-medium transition-colors relative",
+                  isActive("/")
+                    ? "text-primary"
+                    : "text-gray-700 hover:text-primary"
+                )}
+              >
+                Home
+                {isActive("/") && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+              </Link>
+              <a
+                href="#how-it-works"
+                onClick={handleHowItWorksClick}
+                className="text-sm font-medium text-gray-700 hover:text-primary transition-colors"
+              >
+                How It Works
+              </a>
+            </>
+          )}
+          
           {isAuthenticated && (
             <>
+              <Link
+                to="/dashboard"
+                className={cn(
+                  "text-sm font-medium transition-colors relative",
+                  isActive("/dashboard")
+                    ? "text-primary"
+                    : "text-gray-700 hover:text-primary"
+                )}
+              >
+                Dashboard
+                {isActive("/dashboard") && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+              </Link>
               <Link
                 to="/skin-check"
                 className={cn(
@@ -85,13 +111,6 @@ export default function Navbar() {
               </Link>
             </>
           )}
-          <a
-            href="#how-it-works"
-            onClick={handleHowItWorksClick}
-            className="text-sm font-medium text-gray-700 hover:text-primary transition-colors"
-          >
-            How It Works
-          </a>
         </div>
 
         {/* User Profile Section */}
