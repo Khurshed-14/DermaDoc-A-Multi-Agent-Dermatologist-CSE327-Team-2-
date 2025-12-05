@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -64,9 +64,39 @@ export default function Results() {
       const data = query.state.data
       if (!data || !Array.isArray(data)) return false
       const hasProcessing = data.some(r => r.status === "processing" || r.status === "pending")
-      return hasProcessing ? 3000 : false
+      return hasProcessing ? 2000 : false // Poll every 2 seconds when processing
     },
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
   })
+
+  // Track previous results to detect status changes
+  const prevResultsRef = useRef(results)
+  
+  // Effect to refetch when status changes from processing to processed
+  useEffect(() => {
+    if (!results || !prevResultsRef.current) {
+      prevResultsRef.current = results
+      return
+    }
+
+    // Check if any item changed from processing/pending to processed
+    const statusChanged = results.some((currentResult) => {
+      const prevResult = prevResultsRef.current?.find(r => r.id === currentResult.id)
+      if (!prevResult) return false
+      
+      const wasProcessing = prevResult.status === "processing" || prevResult.status === "pending"
+      const isProcessed = currentResult.status === "processed" || currentResult.status === "failed"
+      
+      return wasProcessing && isProcessed
+    })
+
+    if (statusChanged) {
+      // Refetch immediately when status changes
+      refetch()
+    }
+
+    prevResultsRef.current = results
+  }, [results, refetch])
 
   // Pagination logic
   const totalPages = results ? Math.ceil(results.length / itemsPerPage) : 0
