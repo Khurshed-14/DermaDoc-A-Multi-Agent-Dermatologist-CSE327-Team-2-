@@ -29,6 +29,8 @@ class SkinCheckImageBase(BaseModel):
     body_part: Optional[str] = None
     confidence: Optional[float] = None
     predictions: Optional[Dict[str, float]] = None
+    gemini_recommendation: Optional[str] = None
+    gemini_description: Optional[str] = None
 
 
 class SkinCheckImageCreate(SkinCheckImageBase):

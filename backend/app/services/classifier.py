@@ -9,39 +9,24 @@ from pathlib import Path
 from typing import Dict, Tuple, Optional
 import asyncio
 from functools import lru_cache
+from google import generativeai as genai
+from app.core.config import settings
 
 # Model path - relative to backend directory
 _BACKEND_DIR = Path(__file__).parent.parent.parent
 MODEL_PATH = _BACKEND_DIR / "CNN Models" / "efficientnetb4_classifier.pth"
 
 # Class labels for the 7 skin lesion types
-CLASS_LABELS = ["AKIEC", "BCC", "BKL", "DF", "MEL", "NV", "VASC"]
+CLASS_LABELS = ["NV", "MEL", "BKL", "BCC", "AKIEC", "VASC", "DF"]
 
 # Disease information mapping
+# NOTE: Order doesn't matter for dictionary lookups, but organized to match CLASS_LABELS for maintainability
 DISEASE_INFO = {
-    "AKIEC": {
-        "name": "Actinic Keratoses / Intraepithelial Carcinoma",
-        "description": "Pre-cancerous scaly patches caused by sun damage. Can develop into squamous cell carcinoma if untreated.",
-        "severity": "pre-cancerous",
-        "recommendation": "Consult a dermatologist for evaluation and treatment options."
-    },
-    "BCC": {
-        "name": "Basal Cell Carcinoma",
-        "description": "The most common type of skin cancer. Usually appears as a pearly or waxy bump, or a flat flesh-colored lesion.",
-        "severity": "cancer",
-        "recommendation": "Seek medical attention. Early treatment is highly effective."
-    },
-    "BKL": {
-        "name": "Benign Keratosis",
-        "description": "Non-cancerous skin growths including seborrheic keratoses, solar lentigines, and lichen planus-like keratoses.",
+    "NV": {
+        "name": "Melanocytic Nevi",
+        "description": "Common moles. Benign growths of melanocytes that appear as brown or black spots on the skin.",
         "severity": "benign",
-        "recommendation": "Generally harmless. Monitor for any changes."
-    },
-    "DF": {
-        "name": "Dermatofibroma",
-        "description": "A common benign skin growth that usually appears on the legs. Feels like a hard lump under the skin.",
-        "severity": "benign",
-        "recommendation": "Typically no treatment needed unless bothersome."
+        "recommendation": "Monitor for changes in size, shape, or color using the ABCDE rule."
     },
     "MEL": {
         "name": "Melanoma",
@@ -49,17 +34,35 @@ DISEASE_INFO = {
         "severity": "serious-cancer",
         "recommendation": "Seek immediate medical attention. Early detection is critical for successful treatment."
     },
-    "NV": {
-        "name": "Melanocytic Nevi",
-        "description": "Common moles. Benign growths of melanocytes that appear as brown or black spots on the skin.",
+    "BKL": {
+        "name": "Benign Keratosis",
+        "description": "Non-cancerous skin growths including seborrheic keratoses, solar lentigines, and lichen planus-like keratoses.",
         "severity": "benign",
-        "recommendation": "Monitor for changes in size, shape, or color using the ABCDE rule."
+        "recommendation": "Generally harmless. Monitor for any changes."
+    },
+    "BCC": {
+        "name": "Basal Cell Carcinoma",
+        "description": "The most common type of skin cancer. Usually appears as a pearly or waxy bump, or a flat flesh-colored lesion.",
+        "severity": "cancer",
+        "recommendation": "Seek medical attention. Early treatment is highly effective."
+    },
+    "AKIEC": {
+        "name": "Actinic Keratoses / Intraepithelial Carcinoma",
+        "description": "Pre-cancerous scaly patches caused by sun damage. Can develop into squamous cell carcinoma if untreated.",
+        "severity": "pre-cancerous",
+        "recommendation": "Consult a dermatologist for evaluation and treatment options."
     },
     "VASC": {
         "name": "Vascular Lesions",
         "description": "Lesions related to blood vessels, including cherry angiomas, angiokeratomas, and pyogenic granulomas.",
         "severity": "benign",
         "recommendation": "Usually benign. Consult if bleeding or changing."
+    },
+    "DF": {
+        "name": "Dermatofibroma",
+        "description": "A common benign skin growth that usually appears on the legs. Feels like a hard lump under the skin.",
+        "severity": "benign",
+        "recommendation": "Typically no treatment needed unless bothersome."
     }
 }
 
@@ -203,3 +206,116 @@ def get_disease_info(disease_type: str) -> Dict:
         "severity": "unknown",
         "recommendation": "Consult a dermatologist for proper evaluation."
     })
+
+
+async def generate_personalized_disease_info(
+    disease_type: str,
+    confidence: float,
+    predictions: Dict[str, float],
+    base_info: Dict
+) -> Dict[str, str]:
+    """
+    Generate personalized recommendation and description using Gemini 2.5 Flash Lite
+    based on the classification results.
+    
+    Args:
+        disease_type: Predicted disease type
+        confidence: Confidence score (0-1)
+        predictions: Dictionary of all class probabilities
+        base_info: Base disease information from DISEASE_INFO
+        
+    Returns:
+        Dictionary with 'recommendation' and 'description' keys containing generated text
+    """
+    try:
+        # Check if Gemini API key is configured
+        api_key = (settings.GEMINI_API_KEY or "").strip()
+        if not api_key:
+            print("Gemini API key not configured, using base disease info")
+            return {
+                "recommendation": base_info.get("recommendation", "Consult a dermatologist for proper evaluation."),
+                "description": base_info.get("description", "Unknown condition")
+            }
+        
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")
+        
+        # Format predictions for context
+        top_predictions = sorted(
+            predictions.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )[:3]
+        
+        predictions_text = ", ".join([
+            f"{label}: {prob*100:.1f}%" 
+            for label, prob in top_predictions
+        ])
+        
+        # Create prompt for Gemini
+        prompt = f"""You are a dermatology AI assistant. Based on the following skin lesion classification results, generate personalized, concise information:
+
+Classification Results:
+- Predicted Condition: {base_info.get('name', disease_type)}
+- Confidence: {confidence*100:.1f}%
+- Top Predictions: {predictions_text}
+- Severity Level: {base_info.get('severity', 'unknown')}
+
+Generate TWO short, personalized responses (each 2-3 sentences maximum):
+
+1. RECOMMENDATION: A brief, actionable recommendation based on the confidence level and condition. If confidence is high (>80%), be more specific. If lower, suggest monitoring. Keep it practical and reassuring.
+
+2. DESCRIPTION: A concise, patient-friendly explanation of what this condition means, tailored to the confidence level. If confidence is lower, mention that further evaluation may be needed.
+
+Format your response EXACTLY as:
+RECOMMENDATION: [your recommendation here]
+DESCRIPTION: [your description here]
+
+Be concise, professional, and empathetic. Do not include any other text."""
+
+        # Run blocking Gemini API call in executor to avoid blocking the event loop
+        def _call_gemini():
+            """Synchronous Gemini API call"""
+            return model.generate_content(
+                prompt,
+                generation_config={
+                    "max_output_tokens": 300,
+                    "temperature": 0.7,
+                }
+            )
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, _call_gemini)
+        
+        # Parse the response
+        response_text = response.text.strip()
+        
+        # Extract recommendation and description
+        recommendation = base_info.get("recommendation", "Consult a dermatologist for proper evaluation.")
+        description = base_info.get("description", "Unknown condition")
+        
+        if "RECOMMENDATION:" in response_text:
+            rec_part = response_text.split("RECOMMENDATION:")[1]
+            if "DESCRIPTION:" in rec_part:
+                recommendation = rec_part.split("DESCRIPTION:")[0].strip()
+            else:
+                recommendation = rec_part.strip()
+        
+        if "DESCRIPTION:" in response_text:
+            desc_part = response_text.split("DESCRIPTION:")[1]
+            description = desc_part.strip()
+        
+        print(f"Generated personalized info for {disease_type} (confidence: {confidence:.2%})")
+        
+        return {
+            "recommendation": recommendation,
+            "description": description
+        }
+        
+    except Exception as e:
+        print(f"Error generating personalized disease info with Gemini: {e}")
+        # Fallback to base info if Gemini fails
+        return {
+            "recommendation": base_info.get("recommendation", "Consult a dermatologist for proper evaluation."),
+            "description": base_info.get("description", "Unknown condition")
+        }

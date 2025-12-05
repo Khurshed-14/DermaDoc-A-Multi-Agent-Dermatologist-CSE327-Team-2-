@@ -26,11 +26,15 @@ def _build_skin_check_image(img: dict) -> SkinCheckImage:
     disease_info = None
     if img.get("disease_type"):
         info = get_disease_info(img["disease_type"])
+        # Use Gemini-generated fields if available, otherwise use base info
+        description = img.get("gemini_description") or info["description"]
+        recommendation = img.get("gemini_recommendation") or info["recommendation"]
+        
         disease_info = DiseaseInfo(
             name=info["name"],
-            description=info["description"],
+            description=description,
             severity=info["severity"],
-            recommendation=info["recommendation"]
+            recommendation=recommendation
         )
     
     return SkinCheckImage(
@@ -42,6 +46,8 @@ def _build_skin_check_image(img: dict) -> SkinCheckImage:
         body_part=img.get("body_part"),
         confidence=img.get("confidence"),
         predictions=img.get("predictions"),
+        gemini_recommendation=img.get("gemini_recommendation"),
+        gemini_description=img.get("gemini_description"),
         disease_info=disease_info,
         created_at=img["created_at"],
         updated_at=img["updated_at"],

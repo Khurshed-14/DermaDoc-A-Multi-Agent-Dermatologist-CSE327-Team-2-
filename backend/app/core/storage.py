@@ -199,9 +199,9 @@ async def save_skin_check_image(file: UploadFile, user_id: str) -> str:
         )
 
 
-def move_to_processed(relative_path: str) -> str:
+async def move_to_processed(relative_path: str) -> str:
     """
-    Move an image from processing to processed directory
+    Move an image from processing to processed directory (async)
     
     Args:
         relative_path: Current relative path (e.g., "skin_check_images/user_id/processing/filename.jpg")
@@ -221,18 +221,26 @@ def move_to_processed(relative_path: str) -> str:
     new_relative_path = relative_path.replace("/processing/", "/processed/")
     new_path = STORAGE_ROOT / new_relative_path
     
-    # Ensure processed directory exists
+    # Ensure processed directory exists (this is fast, can be synchronous)
     new_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Move the file
+    # Move the file using executor to avoid blocking the event loop
     try:
         import shutil
-        shutil.move(str(current_path), str(new_path))
+        import asyncio
         
-        # Try to remove processing directory if empty
-        processing_dir = current_path.parent
-        if processing_dir.exists() and not any(processing_dir.iterdir()):
-            processing_dir.rmdir()
+        def _move_file():
+            """Synchronous file move operation"""
+            shutil.move(str(current_path), str(new_path))
+            
+            # Try to remove processing directory if empty
+            processing_dir = current_path.parent
+            if processing_dir.exists() and not any(processing_dir.iterdir()):
+                processing_dir.rmdir()
+        
+        # Run blocking file operations in executor
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, _move_file)
         
         return new_relative_path
     except Exception as e:
