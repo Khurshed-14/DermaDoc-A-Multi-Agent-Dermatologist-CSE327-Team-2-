@@ -137,14 +137,14 @@ def get_image_url(image_path: Optional[str]) -> Optional[str]:
 
 async def save_skin_check_image(file: UploadFile, user_id: str) -> str:
     """
-    Save skin check image to storage
+    Save skin check image to storage in the processing subdirectory
     
     Args:
         file: Uploaded file object
         user_id: User ID for organizing files
         
     Returns:
-        Relative path to the saved image (e.g., "skin_check_images/user_id/filename.jpg")
+        Relative path to the saved image (e.g., "skin_check_images/user_id/processing/filename.jpg")
     """
     # Validate file extension
     file_ext = Path(file.filename).suffix.lower()
@@ -154,13 +154,13 @@ async def save_skin_check_image(file: UploadFile, user_id: str) -> str:
             detail=f"Invalid file type. Allowed types: {', '.join(ALLOWED_IMAGE_EXTENSIONS)}"
         )
     
-    # Create user-specific directory
-    user_dir = SKIN_CHECK_IMAGES_DIR / user_id
-    user_dir.mkdir(parents=True, exist_ok=True)
+    # Create user-specific processing directory
+    processing_dir = SKIN_CHECK_IMAGES_DIR / user_id / "processing"
+    processing_dir.mkdir(parents=True, exist_ok=True)
     
     # Generate unique filename
     filename = f"{uuid.uuid4()}{file_ext}"
-    file_path = user_dir / filename
+    file_path = processing_dir / filename
     
     # Read file content and check size
     content = await file.read()
@@ -191,12 +191,66 @@ async def save_skin_check_image(file: UploadFile, user_id: str) -> str:
                 detail=f"Failed to save image: File was not created at {file_path}"
             )
         
-        return f"skin_check_images/{user_id}/{filename}"
+        return f"skin_check_images/{user_id}/processing/{filename}"
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to save image: {str(e)}"
         )
+
+
+def move_to_processed(relative_path: str) -> str:
+    """
+    Move an image from processing to processed directory
+    
+    Args:
+        relative_path: Current relative path (e.g., "skin_check_images/user_id/processing/filename.jpg")
+        
+    Returns:
+        New relative path (e.g., "skin_check_images/user_id/processed/filename.jpg")
+    """
+    if not relative_path or "/processing/" not in relative_path:
+        return relative_path
+    
+    # Get current file path
+    current_path = STORAGE_ROOT / relative_path
+    if not current_path.exists():
+        return relative_path
+    
+    # Create new path in processed directory
+    new_relative_path = relative_path.replace("/processing/", "/processed/")
+    new_path = STORAGE_ROOT / new_relative_path
+    
+    # Ensure processed directory exists
+    new_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Move the file
+    try:
+        import shutil
+        shutil.move(str(current_path), str(new_path))
+        
+        # Try to remove processing directory if empty
+        processing_dir = current_path.parent
+        if processing_dir.exists() and not any(processing_dir.iterdir()):
+            processing_dir.rmdir()
+        
+        return new_relative_path
+    except Exception as e:
+        print(f"Error moving file to processed: {e}")
+        return relative_path
+
+
+def get_absolute_path(relative_path: str) -> Path:
+    """
+    Get the absolute path for a relative storage path
+    
+    Args:
+        relative_path: Relative path from storage root
+        
+    Returns:
+        Absolute Path object
+    """
+    return STORAGE_ROOT / relative_path
 
 
 async def delete_skin_check_image(image_path: Optional[str]) -> bool:

@@ -8,6 +8,7 @@ import Login from "./pages/Login"
 import Signup from "./pages/Signup"
 import Profile from "./pages/Profile"
 import SkinCheck from "./pages/SkinCheck"
+import Results from "./pages/Results"
 import { AuthProvider } from "./contexts/AuthContext"
 import { ChatbotProvider } from "./contexts/ChatbotContext"
 import Chatbot from "./components/Chatbot"
@@ -50,6 +51,14 @@ function App() {
                     element={
                       <ProtectedRoute>
                         <SkinCheck />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
+                    path="/results"
+                    element={
+                      <ProtectedRoute>
+                        <Results />
                       </ProtectedRoute>
                     }
                   />

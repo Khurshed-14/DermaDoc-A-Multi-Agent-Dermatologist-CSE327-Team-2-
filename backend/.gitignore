@@ -29,5 +29,10 @@ htmlcov/
 dist/
 build/
 *.egg-info/
+
+# Ignore folder
+CNN Models
+test pictures
 storage
+
 

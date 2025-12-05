@@ -306,6 +306,32 @@ export const skinCheckApi = {
     return apiRequest(`/api/skin-check/images/${imageId}`)
   },
 
+  // Get all processed results for the current user
+  getResults: async () => {
+    return apiRequest("/api/skin-check/results")
+  },
+
+  // Get a specific result with full details (useful for polling)
+  getResult: async (imageId) => {
+    return apiRequest(`/api/skin-check/results/${imageId}`)
+  },
+
+  // Poll for result completion
+  pollResult: async (imageId, maxAttempts = 60, intervalMs = 2000) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const result = await apiRequest(`/api/skin-check/results/${imageId}`)
+      
+      if (result.status === "processed" || result.status === "failed") {
+        return result
+      }
+      
+      // Wait before next poll
+      await new Promise(resolve => setTimeout(resolve, intervalMs))
+    }
+    
+    throw new Error("Timeout waiting for classification results")
+  },
+
   updateImage: async (imageId, updateData) => {
     return apiRequest(`/api/skin-check/images/${imageId}`, {
       method: "PUT",

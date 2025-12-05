@@ -54,20 +54,36 @@ export default function Navbar() {
             )}
           </Link>
           {isAuthenticated && (
-            <Link
-              to="/skin-check"
-              className={cn(
-                "text-sm font-medium transition-colors relative",
-                isActive("/skin-check")
-                  ? "text-primary"
-                  : "text-gray-700 hover:text-primary"
-              )}
-            >
-              Skin Check
-              {isActive("/skin-check") && (
-                <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
-              )}
-            </Link>
+            <>
+              <Link
+                to="/skin-check"
+                className={cn(
+                  "text-sm font-medium transition-colors relative",
+                  isActive("/skin-check")
+                    ? "text-primary"
+                    : "text-gray-700 hover:text-primary"
+                )}
+              >
+                Skin Check
+                {isActive("/skin-check") && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+              </Link>
+              <Link
+                to="/results"
+                className={cn(
+                  "text-sm font-medium transition-colors relative",
+                  isActive("/results")
+                    ? "text-primary"
+                    : "text-gray-700 hover:text-primary"
+                )}
+              >
+                Your Results
+                {isActive("/results") && (
+                  <span className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />
+                )}
+              </Link>
+            </>
           )}
           <a
             href="#how-it-works"
