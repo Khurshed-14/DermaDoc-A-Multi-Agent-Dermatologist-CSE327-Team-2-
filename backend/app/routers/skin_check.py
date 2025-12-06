@@ -9,7 +9,8 @@ from app.models.skin_check import (
     SkinCheckImageCreate,
     SkinCheckImageUpdate,
     ImageStatus,
-    DiseaseInfo
+    DiseaseInfo,
+    BulkDeleteRequest
 )
 from app.models.user import User
 from app.routers.auth import get_current_user
@@ -391,6 +392,85 @@ async def delete_skin_check_image_endpoint(
         await db.database.SkinCheckImages.delete_one({"_id": ObjectId(image_id)})
         
         return {"message": "Image deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Internal server error: {str(e)}"
+        )
+
+
+@router.delete("/images", status_code=status.HTTP_200_OK)
+async def bulk_delete_skin_check_images(
+    request: BulkDeleteRequest,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete multiple skin check images
+    
+    Args:
+        request: Bulk delete request containing list of image IDs
+        current_user: Current authenticated user
+        
+    Returns:
+        Success message with count of deleted images
+    """
+    try:
+        image_ids = request.image_ids
+        if not image_ids or len(image_ids) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No image IDs provided"
+            )
+        
+        # Validate all ObjectIds
+        valid_ids = []
+        for image_id in image_ids:
+            if ObjectId.is_valid(image_id):
+                valid_ids.append(ObjectId(image_id))
+            else:
+                print(f"Invalid image ID: {image_id}")
+        
+        if not valid_ids:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid image IDs provided"
+            )
+        
+        # Find all images that belong to the user
+        images = await db.database.SkinCheckImages.find({
+            "_id": {"$in": valid_ids},
+            "user_id": ObjectId(current_user.id)
+        }).to_list(length=None)
+        
+        if not images:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No images found"
+            )
+        
+        # Delete files from storage
+        deleted_count = 0
+        for image in images:
+            try:
+                await delete_skin_check_image(image["relative_path"])
+                deleted_count += 1
+            except Exception as e:
+                print(f"Error deleting file for image {image['_id']}: {e}")
+        
+        # Delete from database
+        result = await db.database.SkinCheckImages.delete_many({
+            "_id": {"$in": [img["_id"] for img in images]},
+            "user_id": ObjectId(current_user.id)
+        })
+        
+        return {
+            "message": f"Successfully deleted {result.deleted_count} image(s)",
+            "deleted_count": result.deleted_count
+        }
     except HTTPException:
         raise
     except Exception as e:

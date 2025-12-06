@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from pydantic import BaseModel, Field
 from enum import Enum
 
@@ -44,6 +44,11 @@ class SkinCheckImageUpdate(BaseModel):
     disease_type: Optional[str] = None
     confidence: Optional[float] = None
     predictions: Optional[Dict[str, float]] = None
+
+
+class BulkDeleteRequest(BaseModel):
+    """Model for bulk delete request"""
+    image_ids: List[str] = Field(..., min_items=1, description="List of image IDs to delete")
 
 
 class SkinCheckImage(SkinCheckImageBase):

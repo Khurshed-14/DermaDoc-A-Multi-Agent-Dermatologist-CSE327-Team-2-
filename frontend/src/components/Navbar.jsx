@@ -4,6 +4,7 @@ import { Button } from "./ui/button"
 import { useAuth } from "../contexts/AuthContext"
 import { useLogout } from "../hooks/useAuthMutation"
 import { cn } from "../lib/utils"
+import logo from "../assets/logo.png"
 
 export default function Navbar() {
   const location = useLocation()
@@ -31,9 +32,11 @@ export default function Navbar() {
       <div className="flex items-center justify-between">
         {/* Logo */}
         <Link to={isAuthenticated ? "/dashboard" : "/"} className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-sm">
-            <span className="text-white font-bold text-lg">D</span>
-          </div>
+          <img 
+            src={logo} 
+            alt="DermaScan Logo" 
+            className="h-10 w-auto object-contain"
+          />
           <span className="text-gray-900 text-xl font-semibold tracking-tight">DermaScan</span>
         </Link>
 

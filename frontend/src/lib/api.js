@@ -344,5 +344,12 @@ export const skinCheckApi = {
       method: "DELETE",
     })
   },
+
+  bulkDeleteImages: async (imageIds) => {
+    return apiRequest("/api/skin-check/images", {
+      method: "DELETE",
+      body: JSON.stringify({ image_ids: imageIds }),
+    })
+  },
 }
 

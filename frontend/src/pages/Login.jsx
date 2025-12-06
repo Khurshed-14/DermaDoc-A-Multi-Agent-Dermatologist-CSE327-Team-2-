@@ -8,6 +8,7 @@ import { Label } from "../components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { useAuth } from "../contexts/AuthContext"
 import { authApi } from "../lib/api"
+import logo from "../assets/logo.png"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -42,6 +43,13 @@ export default function Login() {
     <div className="min-h-[80vh] flex items-center justify-center px-6 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
+          <div className="flex flex-col items-center mb-4">
+            <img 
+              src={logo} 
+              alt="DermaScan Logo" 
+              className="h-12 w-auto object-contain mb-4"
+            />
+          </div>
           <CardTitle className="text-3xl font-bold text-center">Welcome Back</CardTitle>
           <CardDescription className="text-center">
             Sign in to your account to continue

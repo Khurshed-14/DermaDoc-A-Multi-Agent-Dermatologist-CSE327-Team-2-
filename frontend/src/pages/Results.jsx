@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  Trash2,
 } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
@@ -21,6 +22,16 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog"
 import { useAuth } from "../contexts/AuthContext"
 import { skinCheckApi } from "../lib/api"
 import { cn } from "../lib/utils"
@@ -32,6 +43,8 @@ export default function Results() {
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
   const [selectedResult, setSelectedResult] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
   const itemsPerPage = 10
   const pageLoadTimeRef = useRef(Date.now())
   
@@ -48,10 +61,20 @@ export default function Results() {
     },
   })
 
-  const handleDelete = (imageId) => {
-    deleteMutation.mutate(imageId)
-  }
-  
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (imageIds) => skinCheckApi.bulkDeleteImages(imageIds),
+    onSuccess: (data) => {
+      toast.success(data.message || `Successfully deleted ${data.deleted_count || selectedIds.size} result(s)`)
+      setSelectedIds(new Set())
+      setSelectedResult(null)
+      queryClient.invalidateQueries({ queryKey: ["skinCheckResults"] })
+    },
+    onError: (error) => {
+      toast.error(error.message || "Failed to delete results")
+    },
+  })
+
   const { 
     data: results, 
     isLoading, 
@@ -119,6 +142,51 @@ export default function Results() {
   const paginatedResults = results 
     ? results.slice((page - 1) * itemsPerPage, page * itemsPerPage)
     : []
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [page])
+
+  const handleDelete = (imageId) => {
+    deleteMutation.mutate(imageId)
+  }
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) {
+      toast.error("Please select at least one result to delete")
+      return
+    }
+    
+    setShowBulkDeleteDialog(true)
+  }
+
+  const confirmBulkDelete = () => {
+    bulkDeleteMutation.mutate(Array.from(selectedIds))
+    setShowBulkDeleteDialog(false)
+  }
+
+  const handleSelectAll = (checked) => {
+    if (checked) {
+      const allIds = new Set(paginatedResults.map(r => r.id))
+      setSelectedIds(allIds)
+    } else {
+      setSelectedIds(new Set())
+    }
+  }
+
+  const handleSelectOne = (id, checked) => {
+    const newSelected = new Set(selectedIds)
+    if (checked) {
+      newSelected.add(id)
+    } else {
+      newSelected.delete(id)
+    }
+    setSelectedIds(newSelected)
+  }
+
+  const isAllSelected = paginatedResults.length > 0 && paginatedResults.every(r => selectedIds.has(r.id))
+  const isSomeSelected = selectedIds.size > 0 && !isAllSelected
 
   const formatDate = (dateString) => {
     if (!dateString) return ""
@@ -191,6 +259,17 @@ export default function Results() {
             </p>
           </div>
           <div className="flex gap-2">
+            {selectedIds.size > 0 && (
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={handleBulkDelete}
+                disabled={bulkDeleteMutation.isPending}
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Selected ({selectedIds.size})
+              </Button>
+            )}
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="w-4 h-4 mr-2" />
               Refresh
@@ -209,6 +288,20 @@ export default function Results() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[50px]">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          ref={(input) => {
+                            if (input) {
+                              input.indeterminate = isSomeSelected
+                            }
+                          }}
+                          onChange={(e) => handleSelectAll(e.target.checked)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                        />
+                      </TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Body Part</TableHead>
                       <TableHead>Status</TableHead>
@@ -227,9 +320,25 @@ export default function Results() {
                       return (
                         <TableRow 
                           key={result.id} 
-                          className="group cursor-pointer hover:bg-muted/50 transition-colors"
-                          onClick={() => setSelectedResult(result)}
+                          className={cn(
+                            "group hover:bg-muted/50 transition-colors",
+                            selectedIds.has(result.id) && "bg-primary/5",
+                            !selectedIds.has(result.id) && "cursor-pointer"
+                          )}
+                          onClick={() => !selectedIds.has(result.id) && setSelectedResult(result)}
                         >
+                          <TableCell>
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.has(result.id)}
+                              onChange={(e) => {
+                                e.stopPropagation()
+                                handleSelectOne(result.id, e.target.checked)
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                            />
+                          </TableCell>
                           <TableCell className="font-medium whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <Calendar className="w-4 h-4 text-muted-foreground" />
@@ -360,6 +469,30 @@ export default function Results() {
         onDelete={handleDelete}
         isDeleting={deleteMutation.isPending}
       />
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selected Results?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedIds.size} result(s)? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={bulkDeleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmBulkDelete}
+              disabled={bulkDeleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {bulkDeleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
