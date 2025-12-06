@@ -94,3 +94,4 @@ export default function PredictionsCard({ predictions, disease_type, confidence,
   )
 }
 
+
