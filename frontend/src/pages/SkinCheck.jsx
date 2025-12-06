@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { useMutation } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 import { Upload, Camera, CheckCircle2, AlertCircle } from "lucide-react"
@@ -32,6 +32,7 @@ const BODY_PARTS = [
 export default function SkinCheck() {
     const { isAuthenticated } = useAuth()
     const navigate = useNavigate()
+    const queryClient = useQueryClient()
     const fileInputRef = useRef(null)
     const [imagePreview, setImagePreview] = useState(null)
     const [selectedBodyPart, setSelectedBodyPart] = useState(null)
@@ -336,6 +337,9 @@ export default function SkinCheck() {
             return skinCheckApi.uploadImage(file, bodyPart)
         },
         onSuccess: (data) => {
+            // Invalidate and refetch results query so new item appears immediately
+            queryClient.invalidateQueries({ queryKey: ["skinCheckResults"] })
+            
             toast.success("Image uploaded! Redirecting to results...", {
                 icon: <CheckCircle2 className="w-5 h-5" />,
                 description: "Your image is being analyzed. This may take a few moments.",

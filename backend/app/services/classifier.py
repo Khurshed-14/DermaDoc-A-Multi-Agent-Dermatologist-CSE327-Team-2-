@@ -65,9 +65,9 @@ DISEASE_INFO = {
     }
 }
 
-# Image preprocessing transforms (EfficientNetB4 expects 380x380 input)
+# Image preprocessing transforms (EfficientNetB4 expects 224x224 input)
 _transform = transforms.Compose([
-    transforms.Resize((380, 380)),
+    transforms.Resize((224, 224)),
     transforms.ToTensor(),
     transforms.Normalize(
         mean=[0.485, 0.456, 0.406],  # ImageNet normalization
@@ -113,21 +113,14 @@ class SkinLesionClassifier:
         if MODEL_PATH.exists():
             checkpoint = torch.load(MODEL_PATH, map_location=self._device, weights_only=False)
             
-            # Handle different checkpoint formats
-            if isinstance(checkpoint, dict):
-                if 'model_state_dict' in checkpoint:
-                    # Training checkpoint format with metadata
-                    state_dict = checkpoint['model_state_dict']
-                    print(f"Loaded checkpoint from epoch {checkpoint.get('epoch', 'unknown')}")
-                    if 'val_acc' in checkpoint:
-                        print(f"Validation accuracy: {checkpoint['val_acc']:.4f}")
-                elif 'state_dict' in checkpoint:
-                    # Alternative checkpoint format
-                    state_dict = checkpoint['state_dict']
-                else:
-                    # Assume it's the raw state dict
-                    state_dict = checkpoint
+            # Extract state_dict matching the test script pattern
+            if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
+                state_dict = checkpoint["model_state_dict"]
+                print(f"Loaded checkpoint from epoch {checkpoint.get('epoch', 'unknown')}")
+                if 'val_acc' in checkpoint:
+                    print(f"Validation accuracy: {checkpoint['val_acc']:.4f}")
             else:
+                # Fallback: assume it's the raw state dict
                 state_dict = checkpoint
             
             self._model.load_state_dict(state_dict)
@@ -163,19 +156,19 @@ class SkinLesionClassifier:
         input_tensor = self.preprocess_image(image_path)
         input_tensor = input_tensor.to(self._device)
         
-        # Run inference
+        # Run inference (matching test script pattern)
         with torch.no_grad():
             outputs = self._model(input_tensor)
             probabilities = torch.softmax(outputs, dim=1)[0]
         
-        # Get predictions
+        # Get top prediction (matching test script: torch.max(probs, dim=0))
+        confidence, pred_idx = torch.max(probabilities, dim=0)
+        disease_type = CLASS_LABELS[pred_idx.item()]
+        confidence = float(confidence.item())
+        
+        # Get all predictions
         probs_numpy = probabilities.cpu().numpy()
         predictions = {label: float(probs_numpy[i]) for i, label in enumerate(CLASS_LABELS)}
-        
-        # Get top prediction
-        top_idx = probabilities.argmax().item()
-        disease_type = CLASS_LABELS[top_idx]
-        confidence = float(probabilities[top_idx])
         
         return {
             "disease_type": disease_type,

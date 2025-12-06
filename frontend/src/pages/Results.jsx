@@ -33,6 +33,12 @@ export default function Results() {
   const [page, setPage] = useState(1)
   const [selectedResult, setSelectedResult] = useState(null)
   const itemsPerPage = 10
+  const pageLoadTimeRef = useRef(Date.now())
+  
+  // Reset page load time when component mounts to enable polling for new uploads
+  useEffect(() => {
+    pageLoadTimeRef.current = Date.now()
+  }, [])
   
   // Delete mutation
   const deleteMutation = useMutation({
@@ -60,14 +66,29 @@ export default function Results() {
     queryKey: ["skinCheckResults"],
     queryFn: skinCheckApi.getResults,
     enabled: isAuthenticated,
+    refetchOnMount: true, // Always refetch when component mounts
     refetchInterval: (query) => {
       const data = query.state.data
+      const timeSincePageLoad = Date.now() - pageLoadTimeRef.current
+      const isRecentPageLoad = timeSincePageLoad < 30000 // First 30 seconds after page load
+      
+      // Always poll for first 30 seconds after page load (to catch new uploads)
+      if (isRecentPageLoad) {
+        return 2000
+      }
+      
+      // After 30 seconds, only poll if there are processing items
       if (!data || !Array.isArray(data)) return false
       const hasProcessing = data.some(r => r.status === "processing" || r.status === "pending")
       return hasProcessing ? 2000 : false // Poll every 2 seconds when processing
     },
     refetchOnWindowFocus: true, // Refetch when user returns to tab
   })
+  
+  // Reset page load time when component mounts
+  useEffect(() => {
+    pageLoadTimeRef.current = Date.now()
+  }, [])
 
   // Track previous results to detect status changes
   const prevResultsRef = useRef(results)
