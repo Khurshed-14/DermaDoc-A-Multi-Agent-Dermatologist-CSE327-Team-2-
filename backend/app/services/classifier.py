@@ -232,38 +232,47 @@ async def generate_personalized_disease_info(
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel("gemini-2.5-flash-lite")
         
-        # Format predictions for context
-        top_predictions = sorted(
+        # Format all predictions, separating high (>30%) and low (<=30%) confidence
+        all_predictions = sorted(
             predictions.items(),
             key=lambda x: x[1],
             reverse=True
-        )[:3]
+        )
         
-        predictions_text = ", ".join([
+        high_confidence = [(label, prob) for label, prob in all_predictions if prob > 0.30]
+        low_confidence = [(label, prob) for label, prob in all_predictions if prob <= 0.30]
+        
+        high_conf_text = ", ".join([
             f"{label}: {prob*100:.1f}%" 
-            for label, prob in top_predictions
-        ])
+            for label, prob in high_confidence
+        ]) if high_confidence else "None"
         
         # Create prompt for Gemini
-        prompt = f"""You are a dermatology AI assistant. Based on the following skin lesion classification results, generate personalized, concise information:
+        prompt = f"""You are a dermatology AI assistant. Generate concise analysis of skin lesion classification results.
 
-Classification Results:
-- Predicted Condition: {base_info.get('name', disease_type)}
-- Confidence: {confidence*100:.1f}%
-- Top Predictions: {predictions_text}
-- Severity Level: {base_info.get('severity', 'unknown')}
+Predictions:
+- Significant (>30%): {high_conf_text}
+- All other classes are below 30% and should NOT be detailed
 
-Generate TWO short, personalized responses (each 2-3 sentences maximum):
+Primary Prediction: {base_info.get('name', disease_type)} ({confidence*100:.1f}%)
+Severity: {base_info.get('severity', 'unknown')}
 
-1. RECOMMENDATION: A brief, actionable recommendation based on the confidence level and condition. If confidence is high (>80%), be more specific. If lower, suggest monitoring. Keep it practical and reassuring.
+CRITICAL INSTRUCTIONS:
+- ONLY provide detailed descriptions for classes with probability >30%
+- DO NOT list or detail any classes below 30%
+- DO NOT mention "all 7 classes" or enumerate low-probability classes
+- Focus ONLY on the significant findings (>30%)
+- Keep response very concise (2-3 sentences total)
 
-2. DESCRIPTION: A concise, patient-friendly explanation of what this condition means, tailored to the confidence level. If confidence is lower, mention that further evaluation may be needed.
+Generate TWO concise responses:
 
-Format your response EXACTLY as:
-RECOMMENDATION: [your recommendation here]
-DESCRIPTION: [your description here]
+1. RECOMMENDATION: One brief sentence with actionable advice based on the primary prediction.
 
-Be concise, professional, and empathetic. Do not include any other text."""
+2. DESCRIPTION: 2-3 sentences describing ONLY the classes above 30%. Do not mention classes below 30% at all.
+
+Format EXACTLY as:
+RECOMMENDATION: [one sentence]
+DESCRIPTION: [2-3 sentences, ONLY about classes >30%]"""
 
         # Run blocking Gemini API call in executor to avoid blocking the event loop
         def _call_gemini():
@@ -271,7 +280,7 @@ Be concise, professional, and empathetic. Do not include any other text."""
             return model.generate_content(
                 prompt,
                 generation_config={
-                    "max_output_tokens": 300,
+                    "max_output_tokens": 200,  # Reduced for more concise responses
                     "temperature": 0.7,
                 }
             )

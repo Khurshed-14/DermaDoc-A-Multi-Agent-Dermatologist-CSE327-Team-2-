@@ -85,6 +85,8 @@ export default function Results() {
   const [selectedResult, setSelectedResult] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const itemsPerPage = 10
   const pageLoadTimeRef = useRef(Date.now())
   
@@ -189,7 +191,16 @@ export default function Results() {
   }, [page])
 
   const handleDelete = (imageId) => {
-    deleteMutation.mutate(imageId)
+    setDeleteTargetId(imageId)
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = () => {
+    if (deleteTargetId) {
+      deleteMutation.mutate(deleteTargetId)
+      setShowDeleteConfirm(false)
+      setDeleteTargetId(null)
+    }
   }
 
   const handleBulkDelete = () => {
@@ -490,8 +501,13 @@ export default function Results() {
                               {selectedIds.has(result.id) ? "Deselect" : "Select"}
                             </ContextMenuItem>
                             <ContextMenuItem 
-                              onClick={() => handleDelete(result.id)}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                handleDelete(result.id)
+                              }}
                               variant="destructive"
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
@@ -575,6 +591,31 @@ export default function Results() {
         onDelete={handleDelete}
         isDeleting={deleteMutation.isPending}
       />
+
+      {/* Single Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this result?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the skin check 
+              result and the associated image from our servers.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Bulk Delete Confirmation Dialog */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>

@@ -19,10 +19,18 @@ export function ChatbotProvider({ children }) {
   }
 
   const toggleChatbot = () => {
-    setIsOpen((prev) => !prev)
-    if (!isOpen) {
-      setIsMinimized(false)
-    }
+    setIsOpen((prev) => {
+      const newValue = !prev
+      // When closing, reset minimized and fullscreen states
+      if (!newValue) {
+        setIsMinimized(false)
+        setIsFullscreen(false)
+      } else {
+        // When opening, reset minimized state
+        setIsMinimized(false)
+      }
+      return newValue
+    })
   }
 
   const minimizeChatbot = () => {
@@ -35,10 +43,14 @@ export function ChatbotProvider({ children }) {
   }
 
   const toggleFullscreen = () => {
-    setIsFullscreen((prev) => !prev)
-    if (!isFullscreen) {
-      setIsMinimized(false)
-    }
+    setIsFullscreen((prev) => {
+      const newValue = !prev
+      // When entering fullscreen, ensure it's not minimized
+      if (newValue) {
+        setIsMinimized(false)
+      }
+      return newValue
+    })
   }
 
   const value = {

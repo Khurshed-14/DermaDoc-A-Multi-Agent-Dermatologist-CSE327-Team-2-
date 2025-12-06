@@ -333,8 +333,8 @@ export default function Chatbot() {
             "bottom-6 right-6 w-96"
           )}
           style={!isMinimized ? {
-            height: isFullscreen ? '80vh' : '80vh',
-            maxHeight: isFullscreen ? '80vh' : '80vh',
+            height: '80vh',
+            maxHeight: '80vh',
             width: isFullscreen ? '65vw' : undefined,
             maxWidth: isFullscreen ? '65vw' : undefined
           } : {}}
