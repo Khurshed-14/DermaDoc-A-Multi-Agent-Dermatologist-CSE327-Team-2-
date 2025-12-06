@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { toast } from "sonner"
-import { MessageCircle, Send, Bot, User, X, Minimize2, Maximize2, RotateCcw, BarChart3 } from "lucide-react"
+import { MessageCircle, Send, Bot, User, X, Minimize2, Maximize2, RotateCcw, BarChart3, Maximize, Square } from "lucide-react"
 import { Button } from "./ui/button"
 import { Input } from "./ui/input"
 import { Textarea } from "./ui/textarea"
@@ -35,10 +35,12 @@ export default function Chatbot() {
   const {
     isOpen,
     isMinimized,
+    isFullscreen,
     toggleChatbot,
     closeChatbot,
     minimizeChatbot,
     maximizeChatbot,
+    toggleFullscreen,
   } = useChatbot()
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState([INITIAL_MESSAGE])
@@ -313,16 +315,28 @@ export default function Chatbot() {
         </Button>
       )}
 
+      {/* Background overlay when in fullscreen */}
+      {isOpen && isFullscreen && (
+        <div 
+          className="fixed inset-0 z-30 bg-background/80 backdrop-blur-sm"
+          onClick={toggleFullscreen}
+        />
+      )}
+
       {/* Floating Chat Window */}
       {isOpen && (
         <div
           className={cn(
-            "fixed bottom-6 right-6 z-40 flex flex-col bg-background border rounded-lg shadow-2xl transition-all duration-300",
-            isMinimized ? "w-80 h-16" : "w-96"
+            "fixed z-40 flex flex-col bg-background border rounded-lg shadow-2xl transition-all duration-300",
+            isMinimized ? "bottom-6 right-6 w-80 h-16" : 
+            isFullscreen ? "inset-0 m-auto" : 
+            "bottom-6 right-6 w-96"
           )}
           style={!isMinimized ? {
-            height: '80vh',
-            maxHeight: '80vh'
+            height: isFullscreen ? '80vh' : '80vh',
+            maxHeight: isFullscreen ? '80vh' : '80vh',
+            width: isFullscreen ? '65vw' : undefined,
+            maxWidth: isFullscreen ? '65vw' : undefined
           } : {}}
         >
           {/* Header */}
@@ -345,6 +359,22 @@ export default function Chatbot() {
                   title="Reset chat"
                 >
                   <RotateCcw className="h-4 w-4" />
+                </Button>
+              )}
+              {!isMinimized && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={toggleFullscreen}
+                  className="h-8 w-8"
+                  aria-label={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                >
+                  {isFullscreen ? (
+                    <Square className="h-4 w-4" />
+                  ) : (
+                    <Maximize className="h-4 w-4" />
+                  )}
                 </Button>
               )}
               {!isMinimized ? (

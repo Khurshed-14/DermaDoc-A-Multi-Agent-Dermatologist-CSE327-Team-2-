@@ -5,6 +5,7 @@ const ChatbotContext = createContext(null)
 export function ChatbotProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false)
   const [isMinimized, setIsMinimized] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
 
   const openChatbot = () => {
     setIsOpen(true)
@@ -14,6 +15,7 @@ export function ChatbotProvider({ children }) {
   const closeChatbot = () => {
     setIsOpen(false)
     setIsMinimized(false)
+    setIsFullscreen(false)
   }
 
   const toggleChatbot = () => {
@@ -25,20 +27,30 @@ export function ChatbotProvider({ children }) {
 
   const minimizeChatbot = () => {
     setIsMinimized(true)
+    setIsFullscreen(false)
   }
 
   const maximizeChatbot = () => {
     setIsMinimized(false)
   }
 
+  const toggleFullscreen = () => {
+    setIsFullscreen((prev) => !prev)
+    if (!isFullscreen) {
+      setIsMinimized(false)
+    }
+  }
+
   const value = {
     isOpen,
     isMinimized,
+    isFullscreen,
     openChatbot,
     closeChatbot,
     toggleChatbot,
     minimizeChatbot,
     maximizeChatbot,
+    toggleFullscreen,
     setIsOpen,
     setIsMinimized,
   }
