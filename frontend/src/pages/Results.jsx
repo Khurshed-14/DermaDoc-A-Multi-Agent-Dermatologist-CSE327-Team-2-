@@ -11,6 +11,9 @@ import {
   ChevronRight,
   Eye,
   Trash2,
+  MessageCircle,
+  CheckSquare,
+  Image as ImageIcon,
 } from "lucide-react"
 import { Button } from "../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
@@ -33,12 +36,49 @@ import {
   AlertDialogTitle,
 } from "../components/ui/alert-dialog"
 import { useAuth } from "../contexts/AuthContext"
+import { useChatbot } from "../contexts/ChatbotContext"
 import { skinCheckApi } from "../lib/api"
 import { cn } from "../lib/utils"
 import { ResultDetailsDialog, SEVERITY_COLORS, STATUS_CONFIG } from "../components/ResultDetailsDialog"
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000"
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "../components/ui/context-menu"
+
+// Image preview component with error handling
+function ImagePreview({ imagePath, onClick }) {
+  const [imageError, setImageError] = useState(false)
+  
+  if (imageError) {
+    return (
+      <div 
+        className="w-16 h-16 rounded-md border border-border bg-muted flex items-center justify-center cursor-pointer"
+        onClick={onClick}
+      >
+        <ImageIcon className="w-6 h-6 text-muted-foreground" />
+      </div>
+    )
+  }
+  
+  return (
+    <img
+      src={`${API_BASE_URL}/api/storage/${imagePath}`}
+      alt="Skin check preview"
+      className="w-16 h-16 object-cover rounded-md border border-border shadow-sm cursor-pointer transition-all hover:scale-105 hover:shadow-md"
+      onClick={onClick}
+      onError={() => setImageError(true)}
+    />
+  )
+}
+
 export default function Results() {
   const { isAuthenticated } = useAuth()
+  const { openChatbot } = useChatbot()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [page, setPage] = useState(1)
@@ -175,18 +215,46 @@ export default function Results() {
     }
   }
 
-  const handleSelectOne = (id, checked) => {
+  const handleSelectOne = (id) => {
     const newSelected = new Set(selectedIds)
-    if (checked) {
-      newSelected.add(id)
-    } else {
+    if (selectedIds.has(id)) {
       newSelected.delete(id)
+    } else {
+      newSelected.add(id)
     }
     setSelectedIds(newSelected)
   }
 
   const isAllSelected = paginatedResults.length > 0 && paginatedResults.every(r => selectedIds.has(r.id))
   const isSomeSelected = selectedIds.size > 0 && !isAllSelected
+
+  const handleAddToDermaDoc = (result) => {
+    if (!result.predictions || Object.keys(result.predictions).length === 0) {
+      toast.error("This result doesn't have prediction data yet")
+      return
+    }
+
+    // Store predictions data in a structured format
+    const predictionsData = {
+      type: "predictions",
+      predictions: result.predictions,
+      disease_type: result.disease_type,
+      confidence: result.confidence,
+      body_part: result.body_part,
+      created_at: result.created_at,
+    }
+
+    // Store in sessionStorage to be picked up by chatbot
+    sessionStorage.setItem("pendingChatPredictions", JSON.stringify(predictionsData))
+    
+    // Dispatch custom event to notify chatbot (even if already open)
+    window.dispatchEvent(new CustomEvent("chatbot:addPredictions", { 
+      detail: predictionsData 
+    }))
+    
+    openChatbot()
+    toast.success("Added predictions to DermaDoc")
+  }
 
   const formatDate = (dateString) => {
     if (!dateString) return ""
@@ -288,26 +356,28 @@ export default function Results() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[50px]">
-                        <input
-                          type="checkbox"
-                          checked={isAllSelected}
-                          ref={(input) => {
-                            if (input) {
-                              input.indeterminate = isSomeSelected
-                            }
-                          }}
-                          onChange={(e) => handleSelectAll(e.target.checked)}
-                          onClick={(e) => e.stopPropagation()}
-                          className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                        />
-                      </TableHead>
+                      {selectedIds.size > 0 && (
+                        <TableHead className="w-[50px]">
+                          <input
+                            type="checkbox"
+                            checked={isAllSelected}
+                            ref={(input) => {
+                              if (input) {
+                                input.indeterminate = isSomeSelected
+                              }
+                            }}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                          />
+                        </TableHead>
+                      )}
+                      <TableHead className="w-[80px]">Image</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Body Part</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Finding</TableHead>
                       <TableHead className="text-right">Confidence</TableHead>
-                      <TableHead className="w-[100px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -318,26 +388,49 @@ export default function Results() {
                         : null
                         
                       return (
-                        <TableRow 
-                          key={result.id} 
-                          className={cn(
-                            "group hover:bg-muted/50 transition-colors",
-                            selectedIds.has(result.id) && "bg-primary/5",
-                            !selectedIds.has(result.id) && "cursor-pointer"
+                        <ContextMenu key={result.id}>
+                          <ContextMenuTrigger asChild>
+                            <TableRow 
+                              className={cn(
+                                "group hover:bg-muted/50 transition-colors cursor-pointer",
+                                selectedIds.has(result.id) && "bg-primary/5"
+                              )}
+                              onClick={() => setSelectedResult(result)}
+                            >
+                          {selectedIds.size > 0 && (
+                            <TableCell>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(result.id)}
+                                onChange={(e) => {
+                                  e.stopPropagation()
+                                  handleSelectOne(result.id)
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                              />
+                            </TableCell>
                           )}
-                          onClick={() => !selectedIds.has(result.id) && setSelectedResult(result)}
-                        >
                           <TableCell>
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.has(result.id)}
-                              onChange={(e) => {
-                                e.stopPropagation()
-                                handleSelectOne(result.id, e.target.checked)
-                              }}
-                              onClick={(e) => e.stopPropagation()}
-                              className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                            />
+                            {result.relative_path ? (
+                              <ImagePreview 
+                                imagePath={result.relative_path}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedResult(result)
+                                }}
+                              />
+                            ) : (
+                              <div 
+                                className="w-16 h-16 rounded-md border border-border bg-muted flex items-center justify-center cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSelectedResult(result)
+                                }}
+                              >
+                                <ImageIcon className="w-6 h-6 text-muted-foreground" />
+                              </div>
+                            )}
                           </TableCell>
                           <TableCell className="font-medium whitespace-nowrap">
                             <div className="flex items-center gap-2">
@@ -385,21 +478,34 @@ export default function Results() {
                               "—"
                             )}
                           </TableCell>
-                          <TableCell>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setSelectedResult(result)
-                              }}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
+                        </TableRow>
+                          </ContextMenuTrigger>
+                          <ContextMenuContent>
+                            <ContextMenuItem onClick={() => setSelectedResult(result)}>
                               <Eye className="w-4 h-4 mr-2" />
                               View
-                            </Button>
-                          </TableCell>
-                        </TableRow>
+                            </ContextMenuItem>
+                            <ContextMenuItem onClick={() => handleSelectOne(result.id)}>
+                              <CheckSquare className="w-4 h-4 mr-2" />
+                              {selectedIds.has(result.id) ? "Deselect" : "Select"}
+                            </ContextMenuItem>
+                            <ContextMenuItem 
+                              onClick={() => handleDelete(result.id)}
+                              variant="destructive"
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </ContextMenuItem>
+                            <ContextMenuSeparator />
+                            <ContextMenuItem 
+                              onClick={() => handleAddToDermaDoc(result)}
+                              disabled={result.status !== "processed" || !result.disease_info}
+                            >
+                              <MessageCircle className="w-4 h-4 mr-2" />
+                              Add to DermaDoc
+                            </ContextMenuItem>
+                          </ContextMenuContent>
+                        </ContextMenu>
                       )
                     })}
                   </TableBody>
