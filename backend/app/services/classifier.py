@@ -17,10 +17,9 @@ _BACKEND_DIR = Path(__file__).parent.parent.parent
 MODEL_PATH = _BACKEND_DIR / "CNN Models" / "efficientnetb4_classifier.pth"
 
 # Class labels for the 7 skin lesion types
-CLASS_LABELS = ["NV", "MEL", "BKL", "BCC", "AKIEC", "VASC", "DF"]
+CLASS_LABELS = ["AKIEC", "BCC", "BKL", "DF", "MEL", "NV", "VASC"]
 
 # Disease information mapping
-# NOTE: Order doesn't matter for dictionary lookups, but organized to match CLASS_LABELS for maintainability
 DISEASE_INFO = {
     "NV": {
         "name": "Melanocytic Nevi",
