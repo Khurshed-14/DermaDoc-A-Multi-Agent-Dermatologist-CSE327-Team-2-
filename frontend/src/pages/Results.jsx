@@ -35,11 +35,6 @@ export default function Results() {
   const itemsPerPage = 10
   const pageLoadTimeRef = useRef(Date.now())
   
-  // Reset page load time when component mounts to enable polling for new uploads
-  useEffect(() => {
-    pageLoadTimeRef.current = Date.now()
-  }, [])
-  
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: (imageId) => skinCheckApi.deleteImage(imageId),
@@ -85,7 +80,7 @@ export default function Results() {
     refetchOnWindowFocus: true, // Refetch when user returns to tab
   })
   
-  // Reset page load time when component mounts
+  // Reset page load time when component mounts to enable polling for new uploads
   useEffect(() => {
     pageLoadTimeRef.current = Date.now()
   }, [])

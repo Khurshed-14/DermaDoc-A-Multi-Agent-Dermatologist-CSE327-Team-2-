@@ -2,7 +2,6 @@
 Background task service for async skin lesion classification
 """
 from datetime import datetime
-from pathlib import Path
 from bson import ObjectId
 from app.core.database import db
 from app.core.storage import get_absolute_path, move_to_processed

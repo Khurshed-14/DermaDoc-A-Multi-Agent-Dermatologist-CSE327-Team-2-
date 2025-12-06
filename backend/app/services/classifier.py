@@ -6,7 +6,7 @@ import torch.nn as nn
 from torchvision import transforms, models
 from PIL import Image
 from pathlib import Path
-from typing import Dict, Tuple, Optional
+from typing import Dict, Optional
 import asyncio
 from functools import lru_cache
 from google import generativeai as genai

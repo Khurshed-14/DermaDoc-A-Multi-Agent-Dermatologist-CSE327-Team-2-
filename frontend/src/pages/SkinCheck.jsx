@@ -142,10 +142,8 @@ export default function SkinCheck() {
             
             allElements.forEach((element) => {
                 const elementId = (element.getAttribute('id') || '').toLowerCase()
-                const elementClass = (element.getAttribute('class') || '').toLowerCase()
                 const elementDataPart = (element.getAttribute('data-part') || '').toLowerCase()
                 const elementDataName = (element.getAttribute('data-name') || '').toLowerCase()
-                const elementTitle = (element.getAttribute('title') || '').toLowerCase()
                 
                 const parent = element.parentElement
                 const parentId = parent ? (parent.getAttribute('id') || '').toLowerCase() : ''
