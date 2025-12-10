@@ -9,11 +9,6 @@ export default function KeyFeatures() {
       description: "Trained on dermatology datasets",
     },
     {
-      icon: Target,
-      title: "Explainable Heatmap",
-      description: "See what areas the model focuses on",
-    },
-    {
       icon: MessageCircle,
       title: "AI Chatbot Assistance",
       description: "Get guidance on what your results mean",
@@ -30,7 +25,7 @@ export default function KeyFeatures() {
       <h2 className="text-4xl font-bold text-gray-800 text-center mb-12">
         Key Features
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {features.map((feature, index) => {
           const Icon = feature.icon
           return (
@@ -53,4 +48,3 @@ export default function KeyFeatures() {
     </section>
   )
 }
-

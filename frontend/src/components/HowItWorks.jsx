@@ -16,7 +16,7 @@ export default function HowItWorks() {
     {
       icon: Search,
       title: "View Results",
-      description: "AI analysis and provide conditions + heatmap explainability",
+      description: "AI analysis and provide conditions",
     },
   ]
 
