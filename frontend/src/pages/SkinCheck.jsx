@@ -436,7 +436,10 @@ export default function SkinCheck() {
         }
 
         if (!selectedBodyPart) {
-            toast.error("Please select a body part")
+            toast.error("Please select a body part", {
+                icon: <AlertCircle className="w-5 h-5" />,
+                description: "You must select a body part before starting the analysis.",
+            })
             return
         }
 
@@ -582,7 +585,7 @@ export default function SkinCheck() {
                                     <Button
                                         onClick={handleUpload}
                                         className="flex-1"
-                                        disabled={!imagePreview || !selectedBodyPart || uploadMutation.isPending}
+                                        disabled={!imagePreview || uploadMutation.isPending}
                                     >
                                         {uploadMutation.isPending ? "Uploading..." : "Start Analysis"}
                                     </Button>
