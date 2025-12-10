@@ -436,10 +436,7 @@ export default function SkinCheck() {
         }
 
         if (!selectedBodyPart) {
-            toast.error("Please select a body part", {
-                icon: <AlertCircle className="w-5 h-5" />,
-                description: "You must select a body part before starting the analysis.",
-            })
+            toast.error("Please select a body part")
             return
         }
 
@@ -573,23 +570,48 @@ export default function SkinCheck() {
 
                                 {/* Action Buttons */}
                                 <div className="flex gap-3">
+                                <Button
+                                    variant="outline"
+                                    onClick={handleCameraClick}
+                                    className="flex-1"
+                                    disabled={uploadMutation.isPending}
+                                >
+                                    <Camera className="w-4 h-4 mr-2" />
+                                    Use Camera
+                                </Button>
+
+                                {/* Wrapper captures clicks when the button is disabled and shows a reminder */}
+                                <div
+                                    className="flex-1"
+                                    onClick={(e) => {
+                                    const isDisabled = !imagePreview || !selectedBodyPart || uploadMutation.isPending;
+                                    if (isDisabled) {
+                                        if (!imagePreview) {
+                                        toast.error("Please select an image first", {
+                                            icon: <AlertCircle className="w-5 h-5" />,
+                                        });
+                                        } else if (!selectedBodyPart) {
+                                        toast.error("Please select a body part before starting analysis", {
+                                            icon: <AlertCircle className="w-5 h-5" />,
+                                        });
+                                        } else if (uploadMutation.isPending) {
+                                        toast("Upload in progress...", { icon: <Upload className="w-5 h-5" /> });
+                                        }
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                    }
+                                    }}
+                                >
                                     <Button
-                                        variant="outline"
-                                        onClick={handleCameraClick}
-                                        className="flex-1"
-                                        disabled={uploadMutation.isPending}
+                                    onClick={handleUpload}
+                                    className="w-full"
+                                    disabled={!imagePreview || !selectedBodyPart || uploadMutation.isPending}
                                     >
-                                        <Camera className="w-4 h-4 mr-2" />
-                                        Use Camera
-                                    </Button>
-                                    <Button
-                                        onClick={handleUpload}
-                                        className="flex-1"
-                                        disabled={!imagePreview || uploadMutation.isPending}
-                                    >
-                                        {uploadMutation.isPending ? "Uploading..." : "Start Analysis"}
+                                    {uploadMutation.isPending ? "Uploading..." : "Start Analysis"}
                                     </Button>
                                 </div>
+                                </div>
+                                
                             </CardContent>
                         </Card>
                     </div>
