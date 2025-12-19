@@ -23,6 +23,7 @@ A Project for CSE327 - Software Engineering | North South University
 - [Tech Stack](#tech-stack)
 - [Prerequisites](#prerequisites)
 - [Quick Start](#quick-start)
+- [Demo](#demo)
 - [Project Structure](#project-structure)
 - [Development](#development)
 - [Deployment](#deployment)
@@ -154,6 +155,10 @@ The frontend will be available at `http://localhost:5173`
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+
+## Demo
+
+https://github.com/user-attachments/assets/70c94989-e950-4916-bca2-994c246e8059
 
 ## 📁 Project Structure
 
