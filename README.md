@@ -163,7 +163,7 @@ https://github.com/user-attachments/assets/70c94989-e950-4916-bca2-994c246e8059
 ## 📁 Project Structure
 
 ```
-DermaDoc-A-Multi-Agent-Dermatologist-CSE327-Team-2-/
+DermaDoc/
 ├── frontend/                 # React frontend application
 │   ├── src/
 │   │   ├── components/       # React components
