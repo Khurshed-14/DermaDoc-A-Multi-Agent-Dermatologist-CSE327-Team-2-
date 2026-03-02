@@ -100,7 +100,7 @@ Before you begin, ensure you have the following installed:
 
 ```bash
 git clone <repository-url>
-cd DermaDoc-A-Multi-Agent-Dermatologist-CSE327-Team-2-
+cd DermaDoc
 ```
 
 ### 2. Backend Setup
